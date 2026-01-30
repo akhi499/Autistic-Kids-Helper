@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SociAble MVP Sandbox</title>
+    <style>
+        /* Basic Styling for the Hackathon Demo */
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { width: 900px; height: 600px; background: white; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: flex; overflow: hidden; }
+        
+        /* Left Side: Avatar & Scenario */
+        .visual-panel { width: 40%; background: #e0e7ff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        .avatar-box { width: 200px; height: 200px; background: #c7d2fe; border-radius: 50%; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; font-size: 80px; overflow: hidden; border: 5px solid white; transition: all 0.3s ease; }
+        .scenario-selector { margin-bottom: 20px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; width: 80%; }
+        
+        /* Right Side: Chat Interface */
+        .chat-panel { width: 60%; display: flex; flex-direction: column; }
+        .chat-window { flex: 1; padding: 20px; overflow-y: auto; background: #fff; border-bottom: 1px solid #eee; }
+        .message { margin-bottom: 15px; padding: 10px 15px; border-radius: 15px; max-width: 70%; line-height: 1.4; font-size: 14px; }
+        .message.user { background: #4f46e5; color: white; align-self: flex-end; margin-left: auto; }
+        .message.ai { background: #f3f4f6; color: #333; align-self: flex-start; }
+        .input-area { padding: 20px; background: #fff; display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        button { padding: 10px 25px; background: #4f46e5; color: white; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #4338ca; }
+
+        /* Vibe Check Alert */
+        .feedback-toast {
+            position: absolute; top: 20px; right: 20px; background: #fee2e2; color: #b91c1c; 
+            padding: 15px 20px; border-radius: 8px; border-left: 5px solid #ef4444; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none; animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="visual-panel">
+        <h3>Current Scenario</h3>
+        <select id="scenarioSelect" class="scenario-selector">
+            <option value="Grocery Store">Grocery Store</option>
+            <option value="Playground">Playground</option>
+            <option value="Classroom">Classroom</option>
+        </select>
+        
+        <div class="avatar-box" id="avatarDisplay">😐</div>
+        <p id="moodText" style="color: #666; font-weight: 600;">Neutral</p>
+    </div>
+
+    <div class="chat-panel">
+        <div class="chat-window" id="chatWindow">
+            <div class="message ai">Hi! I'm ready to practice. Pick a scenario and say hello!</div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="handleEnter(event)">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
+
+<div id="feedbackToast" class="feedback-toast">
+    <strong>⚠️ Vibe Check:</strong> <span id="feedbackText"></span>
+</div>
+
+<script>
+    const chatWindow = document.getElementById('chatWindow');
+    const avatarDisplay = document.getElementById('avatarDisplay');
+    const moodText = document.getElementById('moodText');
+    const feedbackToast = document.getElementById('feedbackToast');
+
+    function handleEnter(e) {
+        if (e.key === 'Enter') sendMessage();
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('userInput');
+        const text = input.value.trim();
+        const scenario = document.getElementById('scenarioSelect').value;
+
+        if (!text) return;
+
+        // 1. Add User Message to UI
+        addMessage(text, 'user');
+        input.value = '';
+
+        try {
+            // 2. Call Django API
+            const response = await fetch('http://127.0.0.1:8000/api/chat/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text, scenario: scenario })
+            });
+
+            // Check if response is OK and is JSON
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Server error: ${response.status} - ${errorText.substring(0, 100)}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error(`Expected JSON but got ${contentType}. Response: ${text.substring(0, 100)}`);
+            }
+
+            const data = await response.json();
+
+            // 3. Handle Error Status
+            if (data.status === 'error') {
+                addMessage(data.reply, 'ai');
+                updateAvatar(data.mood || 'NEUTRAL');
+            }
+            // 4. Handle Vibe Check Flag (Preventative)
+            else if (data.status === 'flagged') {
+                showFeedback(data.feedback);
+                // Remove the "rude" message visually to simulate correction
+                chatWindow.lastElementChild.remove(); 
+            } else {
+                // 5. Handle Success (Adaptive Response)
+                addMessage(data.reply, 'ai');
+                updateAvatar(data.mood);
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            addMessage("⚠️ System Offline. Check backend terminal.", 'ai');
+        }
+    }
+
+    function addMessage(text, sender) {
+        const div = document.createElement('div');
+        div.className = `message ${sender}`;
+        div.textContent = text;
+        chatWindow.appendChild(div);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function updateAvatar(mood) {
+        // Simple Emoji Swaps for MVP (Replace with your Assets/Images later)
+        let emoji = '😐';
+        let color = '#c7d2fe';
+
+        if (mood === 'HAPPY') { emoji = '😄'; color = '#bbf7d0'; }
+        if (mood === 'SAD') { emoji = '😢'; color = '#fecaca'; }
+        if (mood === 'ANGRY') { emoji = '😡'; color = '#fecaca'; }
+
+        avatarDisplay.textContent = emoji;
+        avatarDisplay.style.backgroundColor = color;
+        moodText.textContent = mood.charAt(0).toUpperCase() + mood.slice(1).toLowerCase();
+    }
+
+    function showFeedback(text) {
+        const feedbackText = document.getElementById('feedbackText');
+        feedbackText.textContent = text;
+        feedbackToast.style.display = 'block';
+        
+        setTimeout(() => {
+            feedbackToast.style.display = 'none';
+        }, 4000);
+    }
+</script>
+
+</body>
+</html>

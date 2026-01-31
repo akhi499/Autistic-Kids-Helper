@@ -26,7 +26,8 @@
         .tasks-list li { padding: 10px 12px; margin-bottom: 6px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; transition: background 0.2s; }
         .tasks-list li:hover { background: #e0e7ff; border-color: #a5b4fc; }
         .tasks-list .task-label { font-size: 0.85rem; color: #374151; flex: 1; min-width: 0; }
-        .tasks-list .task-reward { font-size: 0.8rem; font-weight: 700; color: #92400e; flex-shrink: 0; }
+        .tasks-list .task-reward { font-size: 0.8rem; font-weight: 700; color: #92400e; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; }
+        .tasks-list .task-reward .coin-icon { font-size: 0.95rem; line-height: 1; }
         .tasks-list li.task-done .task-reward { color: #166534; }
         .tasks-list li.task-current { background: #e0e7ff; border-color: #818cf8; }
         .task-popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 500; }
@@ -38,14 +39,27 @@
         .task-popup-box .task-popup-close:hover { background: #b91c1c; }
         .task-popup-box h3 { margin: 0 0 8px; color: #3730a3; font-size: 1.15rem; }
         .task-popup-box .task-popup-desc { margin: 0 0 12px; color: #374151; font-size: 0.9rem; line-height: 1.5; }
-        .task-popup-box .task-popup-reward { font-weight: 700; color: #92400e; font-size: 0.95rem; }
+        .task-popup-box .task-popup-reward { font-weight: 700; color: #92400e; font-size: 0.95rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
         .task-popup-box .task-popup-done { color: #166534; font-weight: 600; }
-        .btn-logout { position: fixed; top: 16px; right: 20px; padding: 8px 16px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; z-index: 51; display: none; }
+        .btn-logout { position: fixed; top: 16px; right: 68px; padding: 8px 16px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; z-index: 51; display: none; }
         .btn-logout:hover { background: #b91c1c; }
         .btn-logout.visible { display: inline-block; }
-        
-        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; min-width: 0; }
-        .hero { text-align: center; margin-bottom: 16px; }
+        .btn-settings { position: fixed; top: 16px; right: 20px; width: 44px; height: 44px; padding: 0; background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 12px; cursor: pointer; font-size: 1.25rem; z-index: 51; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 12px rgba(0,0,0,0.08); transition: background 0.2s, box-shadow 0.2s; }
+        .btn-settings:hover { background: #fff; box-shadow: 0 4px 16px rgba(79,70,229,0.2); }
+        .btn-settings .gear-icon { display: inline-block; color: #6366f1; }
+        .settings-panel { position: fixed; top: 0; right: 0; width: 280px; max-width: 90vw; height: 100vh; background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,0.12); z-index: 200; transform: translateX(100%); transition: transform 0.3s ease; padding: 24px; padding-top: 56px; overflow-y: auto; border-radius: 12px 0 0 12px; }
+        .settings-panel.open { transform: translateX(0); }
+        .settings-panel h3 { margin: 0 0 20px; font-size: 1.15rem; color: #3730a3; }
+        .settings-panel .setting-row { margin-bottom: 16px; }
+        .settings-panel label { display: block; margin-bottom: 6px; font-size: 0.85rem; color: #64748b; font-weight: 500; }
+        .settings-panel select { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; color: #374151; background: #fff; }
+        .settings-panel select:focus { outline: none; border-color: #818cf8; }
+        .settings-close { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; padding: 0; background: #e2e8f0; color: #475569; border: none; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .settings-close:hover { background: #cbd5e1; color: #1e293b; }
+        .settings-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.2); z-index: 199; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .settings-backdrop.visible { opacity: 1; pointer-events: auto; }
+        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; padding-top: 72px; min-width: 0; }
+        .hero { text-align: center; margin-bottom: 20px; }
         .hero h1 { margin: 0; font-size: 1.75rem; color: #3730a3; }
         .hero p { margin: 4px 0 0; font-size: 0.9rem; color: #6366f1; }
         .nav-link { background: transparent; border: 1px solid #818cf8; color: #4f46e5; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; margin-top: 8px; text-decoration: none; display: inline-block; }
@@ -92,8 +106,9 @@
         @keyframes micPulse { 50% { transform: scale(1.05); } }
         .stt-hint { font-size: 0.75rem; color: #6b7280; margin-top: 6px; padding: 0 4px; }
         .stt-hint a { color: #6366f1; }
-        .listening-toast { position: fixed; bottom: 180px; left: 50%; transform: translateX(-50%); background: #4f46e5; color: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: none; z-index: 98; font-weight: 600; }
-        .listening-toast.visible { display: block; animation: popIn 0.3s ease; }
+        .listening-toast { margin-top: 12px; margin-left: auto; margin-right: auto; max-width: 400px; width: 100%; background: #4f46e5; color: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: none; font-weight: 600; text-align: center; box-sizing: border-box; }
+        .listening-toast.visible { display: block; animation: listeningPopIn 0.3s ease; }
+        @keyframes listeningPopIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
         button.try-again { padding: 8px 14px; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: 20px; cursor: pointer; font-size: 0.85rem; }
         button.try-again:hover { background: #fde68a; }
 
@@ -145,8 +160,9 @@
         .login-box .btn-signup:hover { background: #c7d2fe; }
         .login-box .welcome { margin-top: 16px; font-size: 0.9rem; color: #22c55e; text-align: center; display: none; }
 
-        .coins-bar { position: fixed; top: 16px; right: 110px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; z-index: 50; }
-        .coins-bar .coin-count { background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 20px; font-weight: 700; }
+        .coins-bar { position: fixed; top: 16px; right: 165px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; z-index: 50; }
+        .coins-bar .coin-count { display: inline-flex; align-items: center; gap: 6px; background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 20px; font-weight: 700; }
+        .coins-bar .coin-icon { font-size: 1.1rem; line-height: 1; vertical-align: middle; }
         .coins-bar .btn-shop { padding: 6px 14px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
         .coins-bar .btn-shop:hover { background: #4338ca; }
 
@@ -163,12 +179,13 @@
         .shop-box .shop-close-x { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; padding: 0; background: #dc2626; color: white; border: none; border-radius: 50%; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         .shop-box .shop-close-x:hover { background: #b91c1c; }
         .shop-box h2 { margin: 0 0 8px; color: #3730a3; font-size: 1.25rem; }
-        .shop-box .shop-coins { font-size: 0.9rem; color: #6366f1; margin-bottom: 16px; }
+        .shop-box .shop-coins { font-size: 0.9rem; color: #6366f1; margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
+        .shop-box .shop-coins .coin-icon { font-size: 1.1rem; }
         .shop-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
         .shop-item.owned { border-color: #22c55e; background: #dcfce7; }
         .shop-item h4 { margin: 0 0 4px; font-size: 1rem; color: #374151; }
         .shop-item p { margin: 0 0 8px; font-size: 0.85rem; color: #6b7280; }
-        .shop-item .cost { font-weight: 700; color: #92400e; }
+        .shop-item .cost { font-weight: 700; color: #92400e; display: inline-flex; align-items: center; gap: 4px; }
         .shop-item button { padding: 6px 12px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
         .shop-item button:hover { background: #4338ca; }
         .shop-item button:disabled { background: #9ca3af; cursor: not-allowed; }
@@ -221,12 +238,28 @@
 
 <button type="button" class="btn-tasks-toggle" id="btnTasksToggle" title="Open tasks"><span class="btn-tasks-icon" aria-hidden="true">☰</span><span>Tasks</span></button>
 
+<button type="button" class="btn-settings" id="btnSettings" title="Settings" aria-label="Settings"><span class="gear-icon" aria-hidden="true">⚙</span></button>
+
 <button type="button" class="btn-logout" id="btnLogout">Log out</button>
 
 <div class="coins-bar" id="coinsBar" style="display: none;">
     <span class="reward-kindness-badge" id="kindnessBadge" style="display: none;" title="Kindness Badge">🏅</span>
-    <span class="coin-count">🪙 <span id="coinCount">0</span> coins</span>
+    <span class="coin-count"><span class="coin-icon" aria-hidden="true">🪙</span><span id="coinCount">0</span></span>
     <button type="button" class="btn-shop" id="btnShop">Reward Shop</button>
+</div>
+
+<div class="settings-backdrop" id="settingsBackdrop"></div>
+<div class="settings-panel" id="settingsPanel">
+    <button type="button" class="settings-close" id="settingsClose" aria-label="Close">×</button>
+    <h3>Settings</h3>
+    <div class="setting-row">
+        <label for="languageSelect">Language</label>
+        <select id="languageSelect">
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+        </select>
+    </div>
 </div>
 
 <aside class="tasks-bar" id="tasksBar">
@@ -288,6 +321,7 @@
         <p class="stt-hint" id="sttHint">Tap the mic, then speak. Your words appear in the box — tap Send or mic again to stop. Works best in <strong>Chrome or Edge</strong> on <strong>https://</strong> or <strong>localhost</strong>. Allow microphone when asked.</p>
     </div>
 </div>
+<div class="listening-toast" id="listeningToast">Listening — speak now! Tap mic again to stop.</div>
 </div><!-- .main-content -->
 
 <div class="task-popup-overlay" id="taskPopupOverlay">
@@ -299,8 +333,6 @@
         <p class="task-popup-done" id="taskPopupDone" style="display: none;">✓ Completed</p>
     </div>
 </div>
-
-<div class="listening-toast" id="listeningToast">Listening — speak now! Tap mic again to stop.</div>
 
 <div id="feedbackToast" class="feedback-toast">
     <strong>⚠️ Vibe Check:</strong> <span id="feedbackText"></span>
@@ -334,7 +366,7 @@
     <div class="shop-box">
         <button type="button" class="shop-close-x" id="shopCloseX" aria-label="Close shop">×</button>
         <h2>Reward Shop</h2>
-        <p class="shop-coins">You have <strong id="shopCoinCount">0</strong> coins</p>
+        <p class="shop-coins">You have <span class="coin-icon" aria-hidden="true">🪙</span> <strong id="shopCoinCount">0</strong></p>
         <div id="shopRewardsList"></div>
     </div>
 </div>
@@ -497,6 +529,25 @@
     }
     btnTasksToggle.onclick = openTasksPanel;
     document.getElementById('tasksBarClose').onclick = closeTasksPanel;
+    var settingsPanel = document.getElementById('settingsPanel');
+    var settingsBackdrop = document.getElementById('settingsBackdrop');
+    document.getElementById('btnSettings').onclick = function () {
+        settingsPanel.classList.toggle('open');
+        settingsBackdrop.classList.toggle('visible');
+    };
+    document.getElementById('settingsClose').onclick = function () {
+        settingsPanel.classList.remove('open');
+        settingsBackdrop.classList.remove('visible');
+    };
+    settingsBackdrop.onclick = function () {
+        settingsPanel.classList.remove('open');
+        settingsBackdrop.classList.remove('visible');
+    };
+    var languageSelect = document.getElementById('languageSelect');
+    if (localStorage.getItem('sociable_lang')) languageSelect.value = localStorage.getItem('sociable_lang');
+    languageSelect.addEventListener('change', function () {
+        localStorage.setItem('sociable_lang', languageSelect.value);
+    });
     document.getElementById('btnLogout').onclick = function () {
         userToken = null;
         localStorage.removeItem('sociable_token');
@@ -575,7 +626,7 @@
                 div.className = 'shop-item' + (reward.owned ? ' owned' : '');
                 div.innerHTML = '<h4>' + reward.name + '</h4><p>' + reward.description + '</p>' +
                     (reward.owned ? '<span class="owned-badge">✓ Owned</span>' :
-                        '<span class="cost">' + reward.cost + ' coins</span> &nbsp; <button type="button" data-reward-id="' + reward.id + '" data-cost="' + reward.cost + '">Redeem</button>');
+                        '<span class="cost"><span class="coin-icon">🪙</span>' + reward.cost + '</span> &nbsp; <button type="button" data-reward-id="' + reward.id + '" data-cost="' + reward.cost + '">Redeem</button>');
                 shopRewardsList.appendChild(div);
             });
             shopRewardsList.querySelectorAll('button[data-reward-id]').forEach(function (btn) {
@@ -692,7 +743,7 @@
         ul.innerHTML = '';
         if (!options || options.length === 0) {
             const li = document.createElement('li');
-            li.innerHTML = '<span class="task-label">Be kind and friendly.</span><span class="task-reward">+5 coins</span>';
+            li.innerHTML = '<span class="task-label">Be kind and friendly.</span><span class="task-reward"><span class="coin-icon">🪙</span>+5</span>';
             ul.appendChild(li);
             return;
         }
@@ -701,12 +752,12 @@
             const isCurrent = (taskText === currentScenarioGoalText);
             if (isCurrent) li.classList.add('task-current');
             var shortLabel = taskText.length > 48 ? taskText.substring(0, 48) + '…' : taskText;
-            li.innerHTML = '<span class="task-label">' + shortLabel + '</span><span class="task-reward">+5 coins</span>';
+            li.innerHTML = '<span class="task-label">' + shortLabel + '</span><span class="task-reward"><span class="coin-icon">🪙</span>+5</span>';
             li.setAttribute('data-task', taskText);
             li.onclick = function () {
                 document.getElementById('taskPopupTitle').textContent = 'Task';
                 document.getElementById('taskPopupDesc').textContent = taskText;
-                document.getElementById('taskPopupReward').textContent = '+5 coins when you\'re kind · +15 bonus when you complete this task.';
+                document.getElementById('taskPopupReward').innerHTML = '🪙 +5 when you\'re kind · 🪙 +15 bonus when you complete this task.';
                 document.getElementById('taskPopupDone').style.display = (isCurrent && goalTierIndex > 0) ? 'block' : 'none';
                 document.getElementById('taskPopupOverlay').classList.add('visible');
             };
@@ -878,6 +929,20 @@
     }
 
     let currentSpeechUtterance = null;
+    var currentTTSAudio = null;
+    var currentTTSUrl = null;
+
+    function stopCurrentTTS() {
+        if (currentTTSAudio) {
+            currentTTSAudio.pause();
+            currentTTSAudio.currentTime = 0;
+            currentTTSAudio = null;
+        }
+        if (currentTTSUrl) {
+            URL.revokeObjectURL(currentTTSUrl);
+            currentTTSUrl = null;
+        }
+    }
 
     function addMessage(text, sender, mood) {
         const div = document.createElement('div');
@@ -919,6 +984,8 @@
     function speakText(text) {
         var t = (text || '').substring(0, 500).trim();
         if (!t) return;
+        stopCurrentTTS();
+        if (currentSpeechUtterance && window.speechSynthesis) window.speechSynthesis.cancel();
         fetch(API_BASE + '/tts/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -929,9 +996,19 @@
                 return r.blob();
             })
             .then(function (blob) {
-                var url = URL.createObjectURL(blob);
-                var audio = new Audio(url);
-                audio.onended = audio.onerror = function () { URL.revokeObjectURL(url); };
+                if (currentTTSUrl) URL.revokeObjectURL(currentTTSUrl);
+                currentTTSUrl = URL.createObjectURL(blob);
+                var audio = new Audio(currentTTSUrl);
+                currentTTSAudio = audio;
+                audio.onended = audio.onerror = function () {
+                    if (currentTTSAudio === audio) {
+                        currentTTSAudio = null;
+                        if (currentTTSUrl) {
+                            URL.revokeObjectURL(currentTTSUrl);
+                            currentTTSUrl = null;
+                        }
+                    }
+                };
                 audio.play();
             })
             .catch(function () {

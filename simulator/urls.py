@@ -11,6 +11,7 @@ from .views import (
     EndPracticeView,
     SessionListView,
     SessionDetailView,
+    TextToSpeechView,
 )
 
 urlpatterns = [
@@ -25,4 +26,5 @@ urlpatterns = [
     path('practice/end/', EndPracticeView.as_view(), name='practice_end'),
     path('sessions/', SessionListView.as_view(), name='session_list'),
     path('sessions/<int:session_id>/', SessionDetailView.as_view(), name='session_detail'),
+    path('tts/', TextToSpeechView.as_view(), name='tts'),
 ]

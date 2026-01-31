@@ -36,9 +36,14 @@
         
         .chat-panel { width: 60%; display: flex; flex-direction: column; }
         .chat-window { flex: 1; padding: 20px; overflow-y: auto; background: #fff; border-bottom: 1px solid #eee; }
-        .message { margin-bottom: 15px; padding: 10px 15px; border-radius: 15px; max-width: 70%; line-height: 1.4; font-size: 14px; }
-        .message.user { background: #4f46e5; color: white; align-self: flex-end; margin-left: auto; }
-        .message.ai { background: #f3f4f6; color: #333; align-self: flex-start; }
+        .message { margin-bottom: 15px; padding: 10px 15px; border-radius: 18px; max-width: 70%; line-height: 1.4; font-size: 14px; opacity: 1; transform: translateY(0); }
+        .message.user { background: #4f46e5; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 4px; }
+        .message.ai { background: #f3f4f6; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .message.message-enter { animation: messageSlideIn 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
+        @keyframes messageSlideIn {
+            from { opacity: 0; transform: translateY(8px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
         .suggestions-row { padding: 10px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 48px; }
         .suggestions-row .label { font-size: 0.8rem; color: #64748b; margin-right: 8px; flex-shrink: 0; }
         .suggestion-chip { padding: 8px 14px; background: #e0e7ff; color: #4338ca; border: 1px solid #a5b4fc; border-radius: 20px; cursor: pointer; font-size: 0.85rem; }
@@ -47,6 +52,14 @@
         input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
         button.send-btn { padding: 10px 24px; background: #4f46e5; color: white; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; }
         button.send-btn:hover { background: #4338ca; }
+        .btn-mic { width: 44px; height: 44px; border-radius: 50%; border: 2px solid #a5b4fc; background: #e0e7ff; color: #4f46e5; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+        .btn-mic:hover { background: #c7d2fe; }
+        .btn-mic.listening { background: #ef4444; border-color: #dc2626; color: white; animation: micPulse 1s ease-in-out infinite; }
+        @keyframes micPulse { 50% { transform: scale(1.05); } }
+        .stt-hint { font-size: 0.75rem; color: #6b7280; margin-top: 6px; padding: 0 4px; }
+        .stt-hint a { color: #6366f1; }
+        .listening-toast { position: fixed; bottom: 180px; left: 50%; transform: translateX(-50%); background: #4f46e5; color: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: none; z-index: 98; font-weight: 600; }
+        .listening-toast.visible { display: block; animation: popIn 0.3s ease; }
         button.try-again { padding: 8px 14px; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: 20px; cursor: pointer; font-size: 0.85rem; }
         button.try-again:hover { background: #fde68a; }
 
@@ -126,6 +139,32 @@
         .shop-item button:hover { background: #4338ca; }
         .shop-item button:disabled { background: #9ca3af; cursor: not-allowed; }
         .shop-item .owned-badge { color: #166534; font-size: 0.85rem; font-weight: 600; }
+
+        /* Rewards */
+        .avatar-box.reward-star-border { box-shadow: 0 0 0 4px #fbbf24, 0 0 20px rgba(251,191,36,0.5); }
+        body.reward-rainbow .chat-panel .chat-window { background: linear-gradient(135deg, #fef3c7 0%, #fce7f3 25%, #e0e7ff 50%, #d1fae5 75%, #fef3c7 100%); background-size: 200% 200%; animation: rainbowBg 8s ease infinite; }
+        @keyframes rainbowBg { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        body.reward-rainbow .message.user { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+        body.reward-rainbow .message.ai { background: rgba(255,255,255,0.9); }
+        .coins-bar .reward-kindness-badge { font-size: 1.1rem; margin-left: 4px; }
+        #confetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 150; }
+        .certificate-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 400; }
+        .certificate-overlay.visible { display: flex; }
+        .certificate-box { background: #fff; padding: 32px; border-radius: 12px; max-width: 480px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .certificate-box h2 { color: #3730a3; margin: 0 0 8px; font-size: 1.5rem; }
+        .certificate-box .cert-subtitle { color: #6366f1; margin-bottom: 16px; font-size: 0.95rem; }
+        .certificate-box .cert-name { font-size: 1.25rem; font-weight: 700; color: #374151; margin: 16px 0; }
+        .certificate-box .cert-date { font-size: 0.9rem; color: #6b7280; margin-bottom: 20px; }
+        .certificate-box button { padding: 10px 24px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin: 0 8px 8px 0; }
+        .certificate-box button:hover { background: #4338ca; }
+        .voice-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #6b7280; margin-left: 8px; }
+        .voice-toggle input { width: auto; flex: none; }
+        @media print {
+            body * { visibility: hidden; }
+            .certificate-overlay, .certificate-overlay * { visibility: visible; }
+            .certificate-overlay { position: absolute; inset: 0; background: white; }
+            .certificate-box { max-width: none; box-shadow: none; }
+        }
     </style>
 </head>
 <body>
@@ -147,6 +186,7 @@
 </div>
 
 <div class="coins-bar" id="coinsBar" style="display: none;">
+    <span class="reward-kindness-badge" id="kindnessBadge" style="display: none;" title="Kindness Badge">🏅</span>
     <span class="coin-count">🪙 <span id="coinCount">0</span> coins</span>
     <button type="button" class="btn-shop" id="btnShop">Reward Shop</button>
 </div>
@@ -190,12 +230,18 @@
             <button type="button" class="suggestion-chip" data-text="Thank you">Thank you</button>
         </div>
         <div class="input-area">
-            <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="handleEnter(event)">
+            <input type="text" id="userInput" placeholder="Type or tap mic to speak..." onkeypress="handleEnter(event)">
+            <button type="button" class="btn-mic" id="btnMic" title="Speak">🎤</button>
             <button type="button" class="try-again" id="btnTryAgain" style="display: none;">Try again</button>
             <button type="button" class="send-btn" onclick="sendMessage()">Send</button>
+            <div class="voice-toggle">
+                <label><input type="checkbox" id="voiceRepliesCheck" checked> Hear replies</label>
+            </div>
         </div>
+        <p class="stt-hint" id="sttHint">Tap the mic, then speak. Your words appear in the box — tap Send or mic again to stop. Works best in <strong>Chrome or Edge</strong> on <strong>https://</strong> or <strong>localhost</strong>. Allow microphone when asked.</p>
     </div>
 </div>
+<div class="listening-toast" id="listeningToast">Listening — speak now! Tap mic again to stop.</div>
 
 <div id="feedbackToast" class="feedback-toast">
     <strong>⚠️ Vibe Check:</strong> <span id="feedbackText"></span>
@@ -213,6 +259,18 @@
     </div>
 </div>
 
+<canvas id="confetti-canvas" aria-hidden="true"></canvas>
+<div class="certificate-overlay" id="certificateOverlay">
+    <div class="certificate-box" id="certificateBox">
+        <h2>Certificate of Kindness</h2>
+        <p class="cert-subtitle">SociAble</p>
+        <p class="cert-name" id="certUserName">—</p>
+        <p>has practiced being kind and friendly in social situations.</p>
+        <p class="cert-date" id="certDate">—</p>
+        <button type="button" id="certPrint">Print</button>
+        <button type="button" id="certClose">Close</button>
+    </div>
+</div>
 <div class="shop-overlay" id="shopOverlay">
     <div class="shop-box">
         <button type="button" class="shop-close-x" id="shopCloseX" aria-label="Close shop">×</button>
@@ -286,12 +344,22 @@
     // Session stats (makes it a practice tool, not just chat)
     let kindMoments = 0, flaggedCount = 0, hurtMoments = 0, totalMessages = 0;
     const scenariosUsed = new Set();
-    const goalsReached = new Set(); // per scenario
+    let goalTierIndex = 0; // progress-based goals
+    let purchasedRewardIds = [];
+    let storedUsername = '';
+
+    // Progress-based goals: after N kind messages, goal completes and objective changes; coins increase per tier
+    const GOAL_TIERS = [
+        { kindRequired: 3, label: 'Make them smile 3 times', coins: 10 },
+        { kindRequired: 6, label: 'Make them smile 6 times', coins: 25 },
+        { kindRequired: 10, label: 'Make them smile 10 times', coins: 50 },
+        { kindRequired: 15, label: 'Make them smile 15 times', coins: 100 }
+    ];
 
     const SCENARIO_GOALS = {
-        'Grocery Store': 'Goal: Make them smile (e.g. say please, thank you).',
-        'Playground': 'Goal: Be friendly and include others.',
-        'Classroom': 'Goal: Ask for help politely or say sorry if needed.'
+        'Grocery Store': 'Make them smile (e.g. say please, thank you).',
+        'Playground': 'Be friendly and include others.',
+        'Classroom': 'Ask for help politely or say sorry if needed.'
     };
 
     const SCENARIO_IMAGES = {
@@ -327,8 +395,31 @@
                 coinCountEl.textContent = d.coins;
                 shopCoinCount.textContent = d.coins;
                 coinsBar.style.display = 'flex';
+                purchasedRewardIds = d.purchased_reward_ids || [];
+                storedUsername = d.username || '';
+                applyRewards();
             }
         } catch (e) { console.warn('Profile fetch failed', e); }
+    }
+
+    function applyRewards() {
+        document.body.classList.toggle('reward-rainbow', purchasedRewardIds.indexOf('rainbow_theme') !== -1);
+        avatarDisplay.classList.toggle('reward-star-border', purchasedRewardIds.indexOf('star_border') !== -1);
+        document.getElementById('kindnessBadge').style.display = purchasedRewardIds.indexOf('kindness_badge') !== -1 ? 'inline' : 'none';
+        if (purchasedRewardIds.indexOf('certificate') !== -1) {
+            if (!document.getElementById('btnCertificate')) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn-shop';
+                btn.id = 'btnCertificate';
+                btn.textContent = 'Certificate';
+                btn.onclick = openCertificate;
+                coinsBar.appendChild(btn);
+            }
+        } else {
+            const b = document.getElementById('btnCertificate');
+            if (b) b.remove();
+        }
     }
 
     async function awardCoins(amount) {
@@ -382,6 +473,8 @@
             if (r.ok) {
                 coinCountEl.textContent = d.coins;
                 shopCoinCount.textContent = d.coins;
+                purchasedRewardIds = d.purchased_reward_ids || [];
+                applyRewards();
                 openShop(); // refresh list to show owned
             } else {
                 alert(d.error || 'Could not redeem.');
@@ -460,19 +553,24 @@
         flaggedCount = 0;
         hurtMoments = 0;
         totalMessages = 0;
+        goalTierIndex = 0;
         scenariosUsed.clear();
         updateSessionStats();
+        updateScenarioGoal();
         updateAvatar('NEUTRAL');
         renderSuggestions(['Hi!', 'Hello!', 'Can you help me?', 'Thank you']);
     }
 
     function updateScenarioGoal() {
         const scenario = scenarioSelect.value;
-        scenarioGoalEl.innerHTML = SCENARIO_GOALS[scenario] || 'Goal: Make them smile with something kind.';
-        if (goalsReached.has(scenario)) {
-            scenarioGoalEl.innerHTML += ' <span class="badge">Done</span>';
+        const baseGoal = SCENARIO_GOALS[scenario] || 'Make them smile with something kind.';
+        if (goalTierIndex >= GOAL_TIERS.length) {
+            scenarioGoalEl.innerHTML = 'All goals complete! Keep being kind. <span class="badge">★</span>';
+        } else {
+            const tier = GOAL_TIERS[goalTierIndex];
+            const soFar = Math.min(kindMoments, tier.kindRequired);
+            scenarioGoalEl.innerHTML = 'Goal ' + (goalTierIndex + 1) + ': ' + tier.label + ' (' + soFar + '/' + tier.kindRequired + ')';
         }
-
         const scenarioImgUrl = SCENARIO_IMAGES[scenario];
         const scenarioBg = document.getElementById('scenarioBg');
         if (scenarioBg && scenarioImgUrl) {
@@ -524,9 +622,11 @@
             }).catch(function () {});
         }
     }
-    function showGoalReached() {
+    function showGoalReached(tier) {
+        goalToast.textContent = tier ? ('🎉 Goal ' + (goalTierIndex + 1) + ' complete! +' + tier.coins + ' coins') : '🎉 Goal reached! You made them smile.';
         goalToast.style.display = 'block';
-        setTimeout(() => { goalToast.style.display = 'none'; }, 2500);
+        if (purchasedRewardIds.indexOf('confetti') !== -1) runConfetti();
+        setTimeout(function () { goalToast.style.display = 'none'; }, 2500);
     }
 
     function handleEnter(e) {
@@ -602,12 +702,13 @@
                 if (data.mood === 'HAPPY') {
                     kindMoments++;
                     awardCoins(5); // 5 coins per kind moment
-                    if (!goalsReached.has(scenario)) {
-                        goalsReached.add(scenario);
-                        scenarioGoalEl.innerHTML = (SCENARIO_GOALS[scenario] || 'Goal: Make them smile.') + ' <span class="badge">Done</span>';
-                        showGoalReached();
-                        awardCoins(15); // 15 coins bonus for reaching goal (making them smile)
+                    if (goalTierIndex < GOAL_TIERS.length && kindMoments >= GOAL_TIERS[goalTierIndex].kindRequired) {
+                        const tier = GOAL_TIERS[goalTierIndex];
+                        awardCoins(tier.coins);
+                        showGoalReached(tier);
+                        goalTierIndex++;
                     }
+                    updateScenarioGoal();
                 } else if (data.mood === 'SAD' || data.mood === 'ANGRY') {
                     hurtMoments++;
                 }
@@ -619,13 +720,66 @@
         }
     }
 
+    let currentSpeechUtterance = null;
+
     function addMessage(text, sender, mood) {
         const div = document.createElement('div');
-        div.className = `message ${sender}`;
+        div.className = 'message ' + sender + ' message-enter';
         div.textContent = text;
         if (sender === 'ai' && mood) div.setAttribute('data-mood', mood);
         chatWindow.appendChild(div);
         chatWindow.scrollTop = chatWindow.scrollHeight;
+        setTimeout(function () { div.classList.remove('message-enter'); }, 400);
+        if (sender === 'ai' && document.getElementById('voiceRepliesCheck') && document.getElementById('voiceRepliesCheck').checked) {
+            speakText(text);
+        }
+    }
+
+    function getPreferredVoice() {
+        const voices = window.speechSynthesis.getVoices();
+        const en = voices.filter(function (v) { return v.lang.startsWith('en'); });
+        var preferred = en.filter(function (v) {
+            var n = v.name.toLowerCase();
+            return n.indexOf('google') !== -1 || n.indexOf('samantha') !== -1 || n.indexOf('karen') !== -1 ||
+                n.indexOf('daniel') !== -1 || n.indexOf('fiona') !== -1 || n.indexOf('moira') !== -1 ||
+                n.indexOf('zira') !== -1 || n.indexOf('natural') !== -1 || n.indexOf('premium') !== -1;
+        })[0];
+        return preferred || en[0] || voices[0];
+    }
+
+    function speakWithBrowserTTS(text) {
+        if (!window.speechSynthesis) return;
+        if (currentSpeechUtterance) window.speechSynthesis.cancel();
+        var chosen = getPreferredVoice();
+        currentSpeechUtterance = new SpeechSynthesisUtterance(text.substring(0, 300));
+        currentSpeechUtterance.rate = 0.88;
+        currentSpeechUtterance.pitch = 1.02;
+        if (chosen) currentSpeechUtterance.voice = chosen;
+        currentSpeechUtterance.volume = 1;
+        window.speechSynthesis.speak(currentSpeechUtterance);
+    }
+
+    function speakText(text) {
+        var t = (text || '').substring(0, 500).trim();
+        if (!t) return;
+        fetch(API_BASE + '/tts/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: t })
+        })
+            .then(function (r) {
+                if (!r.ok) throw new Error(r.status);
+                return r.blob();
+            })
+            .then(function (blob) {
+                var url = URL.createObjectURL(blob);
+                var audio = new Audio(url);
+                audio.onended = audio.onerror = function () { URL.revokeObjectURL(url); };
+                audio.play();
+            })
+            .catch(function () {
+                speakWithBrowserTTS(t);
+            });
     }
 
     function updateAvatar(mood) {
@@ -643,6 +797,152 @@
         feedbackToast.style.display = 'block';
         setTimeout(() => { feedbackToast.style.display = 'none'; }, 5000);
     }
+
+    function runConfetti() {
+        const canvas = document.getElementById('confetti-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const colors = ['#6366f1', '#22c55e', '#f59e0b', '#ec4899', '#8b5cf6'];
+        const pieces = [];
+        for (let i = 0; i < 80; i++) {
+            pieces.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                w: 6 + Math.random() * 6,
+                h: 6 + Math.random() * 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                vx: (Math.random() - 0.5) * 4,
+                vy: -4 - Math.random() * 6,
+                rot: Math.random() * 360
+            });
+        }
+        let frame = 0;
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            pieces.forEach(function (p) {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.rot += 4;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rot * Math.PI / 180);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                ctx.restore();
+            });
+            frame++;
+            if (frame < 120) requestAnimationFrame(draw);
+            else canvas.style.display = 'none';
+        }
+        canvas.style.display = 'block';
+        draw();
+    }
+
+    function openCertificate() {
+        document.getElementById('certUserName').textContent = storedUsername || 'Practitioner';
+        document.getElementById('certDate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        document.getElementById('certificateOverlay').classList.add('visible');
+    }
+    document.getElementById('certClose').onclick = function () {
+        document.getElementById('certificateOverlay').classList.remove('visible');
+    };
+    document.getElementById('certPrint').onclick = function () {
+        window.print();
+    };
+
+    (function initSpeech() {
+        const btnMic = document.getElementById('btnMic');
+        const sttHint = document.getElementById('sttHint');
+        const listeningToast = document.getElementById('listeningToast');
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!window.isSecureContext) {
+            sttHint.innerHTML = 'Microphone only works on <strong>HTTPS</strong> or <strong>http://localhost</strong>. Open this page via <code>https://</code> or <code>http://127.0.0.1:8000</code> (or localhost) to use speech.';
+            btnMic.title = 'Use HTTPS or localhost first';
+            btnMic.disabled = true;
+            return;
+        }
+        if (!SpeechRecognition) {
+            sttHint.textContent = 'Speech-to-text is not supported in this browser. Use Chrome or Edge.';
+            btnMic.title = 'Speech not supported';
+            btnMic.disabled = true;
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
+        var isListening = false;
+
+        function stopListening() {
+            if (!isListening) return;
+            isListening = false;
+            btnMic.classList.remove('listening');
+            listeningToast.classList.remove('visible');
+            userInput.placeholder = 'Type or tap mic to speak...';
+            try { recognition.stop(); } catch (e) {}
+        }
+
+        btnMic.onclick = function () {
+            if (isListening) {
+                stopListening();
+                return;
+            }
+            userInput.placeholder = 'Listening...';
+            userInput.value = '';
+            listeningToast.classList.add('visible');
+            try {
+                recognition.start();
+                isListening = true;
+                btnMic.classList.add('listening');
+            } catch (err) {
+                stopListening();
+                if (err.message && (err.message.indexOf('already') !== -1 || err.message.indexOf('start') !== -1)) {
+                    userInput.placeholder = 'Tap mic again to start.';
+                } else if (err.message && err.message.indexOf('not allowed') !== -1) {
+                    sttHint.textContent = 'Microphone was blocked. Click the lock or info icon in the address bar and allow microphone, then try again.';
+                }
+            }
+        };
+
+        recognition.onresult = function (e) {
+            var transcript = '';
+            for (var i = 0; i < e.results.length; i++) {
+                if (e.results[i].length > 0) transcript += e.results[i][0].transcript;
+            }
+            if (transcript) userInput.value = transcript;
+        };
+
+        recognition.onend = function () {
+            stopListening();
+        };
+
+        recognition.onerror = function (e) {
+            stopListening();
+            if (e.error === 'not-allowed') {
+                sttHint.textContent = 'Microphone was blocked. Allow microphone in your browser (address bar) and tap the mic again.';
+            } else if (e.error === 'no-speech') {
+                userInput.placeholder = 'No speech heard. Tap mic and try again.';
+            } else if (e.error === 'network') {
+                userInput.placeholder = 'Network error. Check connection and try again.';
+            }
+        };
+    })();
+
+    if (window.speechSynthesis) speechSynthesis.addEventListener('voiceschanged', function () { getPreferredVoice(); });
+
+    if (localStorage.getItem('sociable_voice') !== null) {
+        const v = document.getElementById('voiceRepliesCheck');
+        if (v) v.checked = localStorage.getItem('sociable_voice') === '1';
+    }
+    document.getElementById('voiceRepliesCheck').addEventListener('change', function () {
+        localStorage.setItem('sociable_voice', this.checked ? '1' : '0');
+    });
 
     updateScenarioGoal();
 </script>

@@ -1,4 +1,10 @@
+import json
+import os
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
+
 from django.shortcuts import render
+from django.http import HttpResponse
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
@@ -10,6 +16,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import UserSerializer
 from .utils import analyze_interaction
 from .models import InteractionLog, UserProfile, PracticeSession, PracticeSessionMessage
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # Reward shop: id, name, cost, description (suitable for kids)
 REWARDS = [
@@ -267,3 +279,37 @@ class SessionDetailView(APIView):
             "hurt_moments": session.hurt_moments,
             "messages": messages,
         }, status=status.HTTP_200_OK)
+
+
+class TextToSpeechView(APIView):
+    """Proxy to ElevenLabs TTS. Keeps API key on server. Set ELEVENLABS_API_KEY and optionally ELEVENLABS_VOICE_ID in .env."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        api_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
+        voice_id = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM").strip()  # Rachel (default)
+        if not api_key:
+            return Response({"error": "ElevenLabs API key not configured"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        text = (request.data.get("text") or request.query_params.get("text") or "").strip()[:500]
+        if not text:
+            return Response({"error": "text required"}, status=status.HTTP_400_BAD_REQUEST)
+        url = "https://api.elevenlabs.io/v1/text-to-speech/{}?output_format=mp3_44100_128".format(voice_id)
+        payload = json.dumps({"text": text, "model_id": "eleven_multilingual_v2"}).encode("utf-8")
+        req = Request(
+            url,
+            data=payload,
+            headers={
+                "xi-api-key": api_key,
+                "Content-Type": "application/json",
+                "Accept": "audio/mpeg",
+            },
+            method="POST",
+        )
+        try:
+            with urlopen(req, timeout=15) as resp:
+                audio_bytes = resp.read()
+        except HTTPError as e:
+            return Response({"error": "TTS failed", "detail": str(e.code)}, status=status.HTTP_502_BAD_GATEWAY)
+        except URLError as e:
+            return Response({"error": "TTS failed", "detail": str(e.reason)}, status=status.HTTP_502_BAD_GATEWAY)
+        return HttpResponse(audio_bytes, content_type="audio/mpeg")

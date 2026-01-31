@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SociAble – Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #e0e7ff 0%, #f0f2f5 100%); min-height: 100vh; margin: 0; padding: 24px; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+        .header h1 { margin: 0; color: #3730a3; font-size: 1.5rem; }
+        .back { padding: 8px 16px; background: #4f46e5; color: white; text-decoration: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; }
+        .back:hover { background: #4338ca; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 24px; }
+        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .card h3 { margin: 0 0 8px; font-size: 0.85rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+        .card .value { font-size: 2rem; font-weight: 700; color: #3730a3; }
+        .chart-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 24px; }
+        .chart-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .chart-card h3 { margin: 0 0 16px; font-size: 1rem; color: #374151; }
+        .chart-container { position: relative; height: 220px; }
+        .empty { text-align: center; color: #6b7280; padding: 40px 20px; }
+        .error { background: #fee2e2; color: #b91c1c; padding: 16px; border-radius: 8px; margin-bottom: 24px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>SociAble Analytics</h1>
+        <a href="index.html" class="back">← Back to Practice</a>
+    </div>
+    <div id="errorBox" class="error" style="display: none;"></div>
+    <div id="dashboard">
+        <div class="grid">
+            <div class="card">
+                <h3>Total interactions</h3>
+                <div class="value" id="totalInteractions">—</div>
+            </div>
+            <div class="card">
+                <h3>Kind moments (HAPPY)</h3>
+                <div class="value" id="kindMoments">—</div>
+            </div>
+            <div class="card">
+                <h3>Flagged (rephrased)</h3>
+                <div class="value" id="flaggedCount">—</div>
+            </div>
+        </div>
+        <div class="chart-row">
+            <div class="chart-card">
+                <h3>By scenario</h3>
+                <div class="chart-container"><canvas id="chartScenario"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>By mood</h3>
+                <div class="chart-container"><canvas id="chartMood"></canvas></div>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3>Last 7 days</h3>
+            <div class="chart-container"><canvas id="chartLast7"></canvas></div>
+        </div>
+    </div>
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+        const token = localStorage.getItem('sociable_token');
+        const errorBox = document.getElementById('errorBox');
+
+        function showError(msg) {
+            errorBox.textContent = msg;
+            errorBox.style.display = 'block';
+        }
+
+        async function fetchAnalytics() {
+            if (!token) {
+                showError('Please log in first. Go back to the app and sign in.');
+                return null;
+            }
+            const response = await fetch(API_BASE + '/analytics/', {
+                headers: { 'Authorization': 'Token ' + token }
+            });
+            if (response.status === 401) {
+                showError('Session expired. Please log in again.');
+                return null;
+            }
+            if (!response.ok) {
+                showError('Could not load analytics: ' + response.status);
+                return null;
+            }
+            return response.json();
+        }
+
+        function renderCharts(data) {
+            const byScenario = data.by_scenario || {};
+            const byMood = data.by_mood || {};
+            const last7 = data.last_7_days || [];
+
+            document.getElementById('totalInteractions').textContent = data.total_interactions ?? 0;
+            document.getElementById('kindMoments').textContent = (data.by_mood && data.by_mood.HAPPY) ? data.by_mood.HAPPY : 0;
+            document.getElementById('flaggedCount').textContent = data.flagged_count ?? 0;
+
+            const colors = ['#6366f1', '#8b5cf6', '#a855f7', '#c084fc'];
+            const moodColors = { HAPPY: '#22c55e', SAD: '#f59e0b', ANGRY: '#ef4444', NEUTRAL: '#6b7280' };
+
+            if (Object.keys(byScenario).length > 0) {
+                new Chart(document.getElementById('chartScenario'), {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(byScenario),
+                        datasets: [{ label: 'Interactions', data: Object.values(byScenario), backgroundColor: colors.slice(0, Object.keys(byScenario).length) }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                });
+            } else {
+                document.getElementById('chartScenario').parentElement.innerHTML = '<p class="empty">No scenario data yet. Practice to see stats.</p>';
+            }
+
+            if (Object.keys(byMood).length > 0) {
+                const moodLabels = Object.keys(byMood);
+                new Chart(document.getElementById('chartMood'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: moodLabels,
+                        datasets: [{ data: Object.values(byMood), backgroundColor: moodLabels.map(m => moodColors[m] || '#94a3b8') }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            } else {
+                document.getElementById('chartMood').parentElement.innerHTML = '<p class="empty">No mood data yet.</p>';
+            }
+
+            if (last7.length > 0) {
+                new Chart(document.getElementById('chartLast7'), {
+                    type: 'line',
+                    data: {
+                        labels: last7.map(d => d.date),
+                        datasets: [{ label: 'Interactions', data: last7.map(d => d.count), borderColor: '#4f46e5', fill: true, tension: 0.3 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                });
+            } else {
+                document.getElementById('chartLast7').parentElement.innerHTML = '<p class="empty">No activity in the last 7 days.</p>';
+            }
+        }
+
+        (async function () {
+            const data = await fetchAnalytics();
+            if (data) renderCharts(data);
+        })();
+    </script>
+</body>
+</html>

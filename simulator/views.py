@@ -9,7 +9,16 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import UserSerializer
 from .utils import analyze_interaction
-from .models import InteractionLog
+from .models import InteractionLog, UserProfile, PracticeSession, PracticeSessionMessage
+
+# Reward shop: id, name, cost, description (suitable for kids)
+REWARDS = [
+    {"id": "kindness_badge", "name": "Kindness Badge", "cost": 25, "description": "A shiny badge for your profile."},
+    {"id": "star_border", "name": "Star Avatar Border", "cost": 50, "description": "Stars around your character."},
+    {"id": "rainbow_theme", "name": "Rainbow Theme", "cost": 75, "description": "Colorful rainbow chat theme."},
+    {"id": "certificate", "name": "Certificate of Kindness", "cost": 100, "description": "Print a certificate!"},
+    {"id": "confetti", "name": "Confetti Effect", "cost": 40, "description": "Celebrate with confetti when you reach a goal."},
+]
 
 
 class SignupView(generics.CreateAPIView):
@@ -32,11 +41,18 @@ class ChatInteractionView(APIView):
     def post(self, request):
         user_text = request.data.get('message')
         scenario = request.data.get('scenario', 'Grocery Store')
+        history = request.data.get('history')  # list of { sender: 'user'|'assistant', text: '...' }
 
         if not user_text:
             return Response({"error": "Message is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        result = analyze_interaction(user_text, scenario)
+        if not isinstance(history, list):
+            history = []
+        # Keep last N turns to avoid huge context (e.g. last 10 messages = 5 exchanges)
+        max_history = 12
+        history = history[-max_history:]
+
+        result = analyze_interaction(user_text, scenario, history=history)
 
         # Log for analytics
         if result.get('status') == 'flagged':
@@ -90,4 +106,164 @@ class AnalyticsView(APIView):
             "by_scenario": by_scenario,
             "by_mood": by_mood,
             "last_7_days": last_7_days,
+        }, status=status.HTTP_200_OK)
+
+
+def get_or_create_profile(user):
+    profile, _ = UserProfile.objects.get_or_create(user=user, defaults={"coins": 0})
+    return profile
+
+
+class ProfileView(APIView):
+    """Returns the current user's coins and purchased reward ids."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        profile = get_or_create_profile(request.user)
+        return Response({
+            "username": request.user.username,
+            "coins": profile.coins,
+            "purchased_reward_ids": profile.purchased_reward_ids,
+        }, status=status.HTTP_200_OK)
+
+
+class AwardCoinsView(APIView):
+    """Award coins for kind moments or reaching a goal. Called by frontend."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        amount = request.data.get("amount", 0)
+        if not isinstance(amount, int) or amount <= 0 or amount > 100:
+            return Response({"error": "Invalid amount"}, status=status.HTTP_400_BAD_REQUEST)
+        profile = get_or_create_profile(request.user)
+        profile.coins += amount
+        profile.save(update_fields=["coins"])
+        return Response({"coins": profile.coins, "awarded": amount}, status=status.HTTP_200_OK)
+
+
+class ShopView(APIView):
+    """List available rewards."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        profile = get_or_create_profile(request.user)
+        rewards = []
+        for r in REWARDS:
+            rewards.append({
+                **r,
+                "owned": r["id"] in (profile.purchased_reward_ids or []),
+            })
+        return Response({"rewards": rewards, "coins": profile.coins}, status=status.HTTP_200_OK)
+
+
+class RedeemRewardView(APIView):
+    """Spend coins to purchase a reward."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        reward_id = request.data.get("reward_id")
+        if not reward_id:
+            return Response({"error": "reward_id required"}, status=status.HTTP_400_BAD_REQUEST)
+        reward = next((r for r in REWARDS if r["id"] == reward_id), None)
+        if not reward:
+            return Response({"error": "Unknown reward"}, status=status.HTTP_400_BAD_REQUEST)
+        profile = get_or_create_profile(request.user)
+        purchased = profile.purchased_reward_ids or []
+        if reward_id in purchased:
+            return Response({"error": "Already owned", "coins": profile.coins}, status=status.HTTP_400_BAD_REQUEST)
+        if profile.coins < reward["cost"]:
+            return Response({"error": "Not enough coins", "coins": profile.coins}, status=status.HTTP_400_BAD_REQUEST)
+        profile.coins -= reward["cost"]
+        purchased = list(purchased) + [reward_id]
+        profile.purchased_reward_ids = purchased
+        profile.save(update_fields=["coins", "purchased_reward_ids"])
+        return Response({
+            "coins": profile.coins,
+            "reward_id": reward_id,
+            "purchased_reward_ids": profile.purchased_reward_ids,
+        }, status=status.HTTP_200_OK)
+
+
+class EndPracticeView(APIView):
+    """Log the current conversation as a practice session for parent review, then frontend resets chat."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        scenario = request.data.get('scenario', 'Grocery Store')
+        messages = request.data.get('messages')  # list of { sender, text, mood? }
+        total_messages = request.data.get('total_messages', 0)
+        kind_moments = request.data.get('kind_moments', 0)
+        flagged_count = request.data.get('flagged_count', 0)
+        hurt_moments = request.data.get('hurt_moments', 0)
+
+        if not isinstance(messages, list):
+            messages = []
+
+        session = PracticeSession.objects.create(
+            user=request.user,
+            scenario=scenario,
+            total_messages=total_messages,
+            kind_moments=kind_moments,
+            flagged_count=flagged_count,
+            hurt_moments=hurt_moments,
+        )
+        for i, m in enumerate(messages):
+            sender = (m.get('sender') or 'user').lower()
+            if sender not in ('user', 'assistant'):
+                continue
+            PracticeSessionMessage.objects.create(
+                session=session,
+                sender=sender,
+                text=(m.get('text') or '')[:4096],
+                mood=(m.get('mood') or '')[:16] if sender == 'assistant' else '',
+                order=i,
+            )
+        return Response({
+            "session_id": session.id,
+            "message_count": len(messages),
+        }, status=status.HTTP_200_OK)
+
+
+class SessionListView(APIView):
+    """List practice sessions for the authenticated user (parent review)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        sessions = PracticeSession.objects.filter(user=request.user)[:50]
+        data = [
+            {
+                "id": s.id,
+                "scenario": s.scenario,
+                "ended_at": s.ended_at.isoformat(),
+                "total_messages": s.total_messages,
+                "kind_moments": s.kind_moments,
+                "flagged_count": s.flagged_count,
+                "hurt_moments": s.hurt_moments,
+            }
+            for s in sessions
+        ]
+        return Response({"sessions": data}, status=status.HTTP_200_OK)
+
+
+class SessionDetailView(APIView):
+    """Get one practice session with full message transcript for parent review."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, session_id):
+        session = PracticeSession.objects.filter(user=request.user, id=session_id).first()
+        if not session:
+            return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+        messages = [
+            {"sender": m.sender, "text": m.text, "mood": m.mood or None}
+            for m in session.messages.all()
+        ]
+        return Response({
+            "id": session.id,
+            "scenario": session.scenario,
+            "ended_at": session.ended_at.isoformat(),
+            "total_messages": session.total_messages,
+            "kind_moments": session.kind_moments,
+            "flagged_count": session.flagged_count,
+            "hurt_moments": session.hurt_moments,
+            "messages": messages,
         }, status=status.HTTP_200_OK)

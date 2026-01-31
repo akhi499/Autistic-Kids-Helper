@@ -7,7 +7,10 @@
     <style>
         /* Hackathon-ready: more than a chatbot */
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #e0e7ff 0%, #f0f2f5 100%); min-height: 100vh; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; position: relative; }
+        /* Full-window background: same image as scenario (set via JS) */
+        .scenario-bg { position: fixed; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; z-index: -1; opacity: 0.6; }
+        body::after { content: ''; position: fixed; inset: 0; background: linear-gradient(135deg, rgba(224,231,255,0.55) 0%, rgba(240,242,245,0.6) 100%); z-index: -1; pointer-events: none; }
         
         .hero { text-align: center; margin-bottom: 16px; }
         .hero h1 { margin: 0; font-size: 1.75rem; color: #3730a3; }
@@ -94,9 +97,40 @@
         .login-box .btn-signup { background: #e0e7ff; color: #4f46e5; }
         .login-box .btn-signup:hover { background: #c7d2fe; }
         .login-box .welcome { margin-top: 16px; font-size: 0.9rem; color: #22c55e; text-align: center; display: none; }
+
+        .coins-bar { position: fixed; top: 16px; right: 20px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; z-index: 50; }
+        .coins-bar .coin-count { background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 20px; font-weight: 700; }
+        .coins-bar .btn-shop { padding: 6px 14px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+        .coins-bar .btn-shop:hover { background: #4338ca; }
+
+        .shop-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 300; }
+        .shop-overlay.visible { display: flex; }
+        .shop-overlay.visible .shop-box { animation: shopBob 0.5s ease-out; }
+        @keyframes shopBob {
+            0% { transform: scale(0.9) translateY(-20px); opacity: 0; }
+            50% { transform: scale(1.02) translateY(4px); }
+            70% { transform: scale(0.98) translateY(-2px); }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .shop-box { position: relative; background: white; border-radius: 16px; padding: 24px; padding-top: 36px; max-width: 420px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .shop-box .shop-close-x { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; padding: 0; background: #dc2626; color: white; border: none; border-radius: 50%; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .shop-box .shop-close-x:hover { background: #b91c1c; }
+        .shop-box h2 { margin: 0 0 8px; color: #3730a3; font-size: 1.25rem; }
+        .shop-box .shop-coins { font-size: 0.9rem; color: #6366f1; margin-bottom: 16px; }
+        .shop-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+        .shop-item.owned { border-color: #22c55e; background: #dcfce7; }
+        .shop-item h4 { margin: 0 0 4px; font-size: 1rem; color: #374151; }
+        .shop-item p { margin: 0 0 8px; font-size: 0.85rem; color: #6b7280; }
+        .shop-item .cost { font-weight: 700; color: #92400e; }
+        .shop-item button { padding: 6px 12px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+        .shop-item button:hover { background: #4338ca; }
+        .shop-item button:disabled { background: #9ca3af; cursor: not-allowed; }
+        .shop-item .owned-badge { color: #166534; font-size: 0.85rem; font-weight: 600; }
     </style>
 </head>
 <body>
+<!-- Full-window background: same image as scenarioImg (updated in JS); scenarioImageContainer unchanged -->
+<div class="scenario-bg" id="scenarioBg"></div>
 
 <!-- Login overlay: shown on load, hidden after successful login -->
 <div class="login-overlay" id="loginOverlay">
@@ -110,6 +144,11 @@
         <button type="button" class="btn-signup" id="btnSignup">Sign Up</button>
         <p class="welcome" id="loginWelcome">Welcome! Loading...</p>
     </div>
+</div>
+
+<div class="coins-bar" id="coinsBar" style="display: none;">
+    <span class="coin-count">🪙 <span id="coinCount">0</span> coins</span>
+    <button type="button" class="btn-shop" id="btnShop">Reward Shop</button>
 </div>
 
 <div class="hero">
@@ -166,11 +205,20 @@
 
 <div class="recap-overlay" id="recapOverlay">
     <div class="recap-box">
-        <h2>How did practice go?</h2>
+        <h2>Practice summary</h2>
         <p id="recapSummary">No messages yet. Send a few and come back!</p>
         <div class="stat" id="recapStats"></div>
         <p id="recapTip" style="font-size: 0.85rem; color: #6b7280;"></p>
-        <button type="button" id="btnCloseRecap">Keep practicing</button>
+        <button type="button" id="btnCloseRecap">Start new practice</button>
+    </div>
+</div>
+
+<div class="shop-overlay" id="shopOverlay">
+    <div class="shop-box">
+        <button type="button" class="shop-close-x" id="shopCloseX" aria-label="Close shop">×</button>
+        <h2>Reward Shop</h2>
+        <p class="shop-coins">You have <strong id="shopCoinCount">0</strong> coins</p>
+        <div id="shopRewardsList"></div>
     </div>
 </div>
 
@@ -195,6 +243,11 @@
     const loginOverlay = document.getElementById('loginOverlay');
     const loginWelcome = document.getElementById('loginWelcome');
     const suggestionsRow = document.getElementById('suggestionsRow');
+    const coinsBar = document.getElementById('coinsBar');
+    const coinCountEl = document.getElementById('coinCount');
+    const shopOverlay = document.getElementById('shopOverlay');
+    const shopCoinCount = document.getElementById('shopCoinCount');
+    const shopRewardsList = document.getElementById('shopRewardsList');
 
     // Suggestion chips: click sends that text as the message (dialogue-based)
     suggestionsRow.addEventListener('click', function (e) {
@@ -227,6 +280,7 @@
     if (localStorage.getItem('sociable_token')) {
         userToken = localStorage.getItem('sociable_token');
         loginOverlay.classList.add('hidden');
+        fetchProfile();
     }
 
     // Session stats (makes it a practice tool, not just chat)
@@ -240,15 +294,100 @@
         'Classroom': 'Goal: Ask for help politely or say sorry if needed.'
     };
 
+    const SCENARIO_IMAGES = {
+    'Grocery Store': 'static/grocery_shop.png',
+    'Playground': 'static/playground.png',
+    'Classroom': 'static/classroom.png'
+    };
+
     document.getElementById('aboutToggle').onclick = function () {
         document.getElementById('aboutBox').classList.toggle('visible');
     };
     document.getElementById('btnEndPractice').onclick = function () { showRecap(); };
-    document.getElementById('btnCloseRecap').onclick = function () { recapOverlay.classList.remove('visible'); };
-    scenarioSelect.addEventListener('change', updateScenarioGoal);
+    document.getElementById('btnCloseRecap').onclick = function () {
+        recapOverlay.classList.remove('visible');
+        resetChat();
+    };
+    document.getElementById('btnShop').onclick = openShop;
+    document.getElementById('shopCloseX').onclick = function () { shopOverlay.classList.remove('visible'); };
+    scenarioSelect.addEventListener('change', function () {
+        resetChat();
+        updateScenarioGoal();
+    });
     btnTryAgain.onclick = function () { userInput.focus(); };
     document.getElementById('btnLogin').onclick = handleLogin;
     document.getElementById('btnSignup').onclick = handleSignup;
+
+    async function fetchProfile() {
+        if (!userToken) return;
+        try {
+            const r = await fetch(API_BASE + '/profile/', { headers: { 'Authorization': 'Token ' + userToken } });
+            if (r.ok) {
+                const d = await r.json();
+                coinCountEl.textContent = d.coins;
+                shopCoinCount.textContent = d.coins;
+                coinsBar.style.display = 'flex';
+            }
+        } catch (e) { console.warn('Profile fetch failed', e); }
+    }
+
+    async function awardCoins(amount) {
+        if (!userToken || !amount) return;
+        try {
+            const r = await fetch(API_BASE + '/coins/award/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Token ' + userToken },
+                body: JSON.stringify({ amount: amount })
+            });
+            if (r.ok) {
+                const d = await r.json();
+                coinCountEl.textContent = d.coins;
+                shopCoinCount.textContent = d.coins;
+            }
+        } catch (e) { console.warn('Award coins failed', e); }
+    }
+
+    async function openShop() {
+        shopOverlay.classList.add('visible');
+        if (!userToken) return;
+        try {
+            const r = await fetch(API_BASE + '/shop/', { headers: { 'Authorization': 'Token ' + userToken } });
+            if (!r.ok) return;
+            const d = await r.json();
+            shopCoinCount.textContent = d.coins;
+            shopRewardsList.innerHTML = '';
+            (d.rewards || []).forEach(function (reward) {
+                const div = document.createElement('div');
+                div.className = 'shop-item' + (reward.owned ? ' owned' : '');
+                div.innerHTML = '<h4>' + reward.name + '</h4><p>' + reward.description + '</p>' +
+                    (reward.owned ? '<span class="owned-badge">✓ Owned</span>' :
+                        '<span class="cost">' + reward.cost + ' coins</span> &nbsp; <button type="button" data-reward-id="' + reward.id + '" data-cost="' + reward.cost + '">Redeem</button>');
+                shopRewardsList.appendChild(div);
+            });
+            shopRewardsList.querySelectorAll('button[data-reward-id]').forEach(function (btn) {
+                btn.onclick = function () { redeemReward(btn.getAttribute('data-reward-id'), parseInt(btn.getAttribute('data-cost'), 10)); };
+            });
+        } catch (e) { console.warn('Shop fetch failed', e); }
+    }
+
+    async function redeemReward(rewardId, cost) {
+        if (!userToken || !rewardId) return;
+        try {
+            const r = await fetch(API_BASE + '/shop/redeem/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Token ' + userToken },
+                body: JSON.stringify({ reward_id: rewardId })
+            });
+            const d = await r.json().catch(function () { return {}; });
+            if (r.ok) {
+                coinCountEl.textContent = d.coins;
+                shopCoinCount.textContent = d.coins;
+                openShop(); // refresh list to show owned
+            } else {
+                alert(d.error || 'Could not redeem.');
+            }
+        } catch (e) { alert('Error: ' + e.message); }
+    }
 
     async function handleSignup() {
         const username = document.getElementById('loginUsername').value.trim();
@@ -295,6 +434,7 @@
                 userToken = data.token;
                 localStorage.setItem('sociable_token', userToken);
                 loginWelcome.textContent = 'Welcome, ' + username + '!';
+                fetchProfile();
                 setTimeout(function () {
                     loginOverlay.classList.add('hidden');
                 }, 800);
@@ -308,11 +448,35 @@
         }
     }
 
+    const DEFAULT_GREETING = "Hi! I'm ready to practice. Pick a scenario and say hello!";
+
+    function resetChat() {
+        chatWindow.innerHTML = '';
+        const div = document.createElement('div');
+        div.className = 'message ai';
+        div.textContent = DEFAULT_GREETING;
+        chatWindow.appendChild(div);
+        kindMoments = 0;
+        flaggedCount = 0;
+        hurtMoments = 0;
+        totalMessages = 0;
+        scenariosUsed.clear();
+        updateSessionStats();
+        updateAvatar('NEUTRAL');
+        renderSuggestions(['Hi!', 'Hello!', 'Can you help me?', 'Thank you']);
+    }
+
     function updateScenarioGoal() {
         const scenario = scenarioSelect.value;
         scenarioGoalEl.innerHTML = SCENARIO_GOALS[scenario] || 'Goal: Make them smile with something kind.';
         if (goalsReached.has(scenario)) {
             scenarioGoalEl.innerHTML += ' <span class="badge">Done</span>';
+        }
+
+        const scenarioImgUrl = SCENARIO_IMAGES[scenario];
+        const scenarioBg = document.getElementById('scenarioBg');
+        if (scenarioBg && scenarioImgUrl) {
+            scenarioBg.style.backgroundImage = 'url(' + scenarioImgUrl + ')';
         }
     }
     function updateSessionStats() {
@@ -320,13 +484,45 @@
     }
     function showRecap() {
         const total = totalMessages;
-        let summary = total === 0
-            ? 'No messages yet. Send a few and come back!'
-            : `You sent ${total} message${total !== 1 ? 's' : ''}. ${kindMoments} kind moment${kindMoments !== 1 ? 's' : ''}${flaggedCount ? `, ${flaggedCount} rephrased (vibe check).` : '.'}${hurtMoments ? ` The character felt hurt ${hurtMoments} time(s)—good to notice!` : ''}`;
+        let summary;
+        if (total === 0) {
+            summary = 'No messages yet. Send a few and come back!';
+        } else {
+            summary = 'Overall: ' + total + ' message' + (total !== 1 ? 's' : '') + ' in this practice. ';
+            summary += kindMoments + ' kind moment' + (kindMoments !== 1 ? 's' : '') + '. ';
+            if (flaggedCount) summary += flaggedCount + ' rephrased (vibe check). ';
+            if (hurtMoments) summary += 'The character felt hurt ' + hurtMoments + ' time(s). ';
+            if (kindMoments > 0 && hurtMoments === 0) summary += 'Great job!';
+            else if (kindMoments > 0) summary += 'Keep it up!';
+            else summary += 'Try saying something kind next time.';
+        }
         recapSummary.textContent = summary;
-        recapStats.textContent = `Scenarios: ${[...scenariosUsed].join(', ') || '—'}`;
-        recapTip.textContent = kindMoments > 0 ? 'Keep practicing different scenarios!' : 'Try saying something kind to see them smile.';
+        recapStats.textContent = 'Scenario: ' + scenarioSelect.value + ' · Kind: ' + kindMoments + ' · Flagged: ' + flaggedCount + (hurtMoments ? ' · Hurt: ' + hurtMoments : '');
+        recapTip.textContent = kindMoments > 0 ? 'This conversation has been saved. Parents can review it in Analytics.' : 'Try saying something kind to see them smile.';
         recapOverlay.classList.add('visible');
+
+        // Log conversation for parent review
+        const messages = [];
+        chatWindow.querySelectorAll('.message').forEach(function (el) {
+            const sender = el.classList.contains('user') ? 'user' : 'assistant';
+            const text = el.textContent.trim();
+            const mood = el.getAttribute('data-mood') || '';
+            messages.push({ sender: sender, text: text, mood: mood });
+        });
+        if (userToken && messages.length > 0) {
+            fetch(API_BASE + '/practice/end/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Token ' + userToken },
+                body: JSON.stringify({
+                    scenario: scenarioSelect.value,
+                    messages: messages,
+                    total_messages: totalMessages,
+                    kind_moments: kindMoments,
+                    flagged_count: flaggedCount,
+                    hurt_moments: hurtMoments
+                })
+            }).catch(function () {});
+        }
     }
     function showGoalReached() {
         goalToast.style.display = 'block';
@@ -349,20 +545,29 @@
         totalMessages++;
         scenariosUsed.add(scenario);
 
+        // Build conversation history (all messages except the one we just added) for context
+        const history = [];
+        const messages = chatWindow.querySelectorAll('.message');
+        for (let i = 0; i < messages.length - 1; i++) {
+            const el = messages[i];
+            const sender = el.classList.contains('user') ? 'user' : 'assistant';
+            history.push({ sender: sender, text: el.textContent.trim() });
+        }
+
         try {
             const headers = { 'Content-Type': 'application/json' };
             if (userToken) headers['Authorization'] = 'Token ' + userToken;
             const response = await fetch(API_BASE + '/chat/', {
                 method: 'POST',
                 headers: headers,
-                body: JSON.stringify({ message: text, scenario: scenario })
+                body: JSON.stringify({ message: text, scenario: scenario, history: history })
             });
 
             if (response.status === 401) {
                 userToken = null;
                 localStorage.removeItem('sociable_token');
                 loginOverlay.classList.remove('hidden');
-                addMessage('Please log in again.', 'ai');
+                addMessage('Please log in again.', 'ai', 'NEUTRAL');
                 return;
             }
             if (!response.ok) {
@@ -378,7 +583,7 @@
             const data = await response.json();
 
             if (data.status === 'error') {
-                addMessage(data.reply, 'ai');
+                addMessage(data.reply, 'ai', data.mood || 'NEUTRAL');
                 updateAvatar(data.mood || 'NEUTRAL');
                 renderSuggestions(data.suggestions || []);
             } else if (data.status === 'flagged') {
@@ -391,15 +596,17 @@
                 setTimeout(() => { userInput.placeholder = 'Type your message here...'; }, 3000);
                 renderSuggestions(data.suggestions || ['Hi!', 'Thank you', 'Can you help me?', 'Sorry']);
             } else {
-                addMessage(data.reply, 'ai');
+                addMessage(data.reply, 'ai', data.mood);
                 updateAvatar(data.mood);
                 renderSuggestions(data.suggestions || []);
                 if (data.mood === 'HAPPY') {
                     kindMoments++;
+                    awardCoins(5); // 5 coins per kind moment
                     if (!goalsReached.has(scenario)) {
                         goalsReached.add(scenario);
                         scenarioGoalEl.innerHTML = (SCENARIO_GOALS[scenario] || 'Goal: Make them smile.') + ' <span class="badge">Done</span>';
                         showGoalReached();
+                        awardCoins(15); // 15 coins bonus for reaching goal (making them smile)
                     }
                 } else if (data.mood === 'SAD' || data.mood === 'ANGRY') {
                     hurtMoments++;
@@ -408,14 +615,15 @@
             }
         } catch (error) {
             console.error('Error:', error);
-            addMessage('⚠️ System Offline. Check backend terminal.', 'ai');
+            addMessage('⚠️ System Offline. Check backend terminal.', 'ai', 'NEUTRAL');
         }
     }
 
-    function addMessage(text, sender) {
+    function addMessage(text, sender, mood) {
         const div = document.createElement('div');
         div.className = `message ${sender}`;
         div.textContent = text;
+        if (sender === 'ai' && mood) div.setAttribute('data-mood', mood);
         chatWindow.appendChild(div);
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }

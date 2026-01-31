@@ -7,19 +7,49 @@
     <style>
         /* Hackathon-ready: more than a chatbot */
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; position: relative; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; min-height: 100vh; position: relative; display: flex; flex-direction: row; }
         /* Full-window background: same image as scenario (set via JS) */
         .scenario-bg { position: fixed; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; z-index: -1; opacity: 0.6; }
         body::after { content: ''; position: fixed; inset: 0; background: linear-gradient(135deg, rgba(224,231,255,0.55) 0%, rgba(240,242,245,0.6) 100%); z-index: -1; pointer-events: none; }
+
+        .tasks-bar { position: fixed; left: 0; top: 0; width: 260px; min-height: 100vh; background: rgba(255,255,255,0.98); border-right: 1px solid #e2e8f0; padding: 16px 12px; padding-top: 52px; z-index: 45; transform: translateX(-100%); transition: transform 0.3s ease; box-shadow: 4px 0 24px rgba(0,0,0,0.1); }
+        .tasks-bar.open { transform: translateX(0); }
+        .tasks-bar .tasks-bar-header { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; }
+        .tasks-bar h2 { margin: 0; font-size: 1.1rem; color: #3730a3; padding: 0 4px; }
+        .tasks-bar-close { width: 32px; height: 32px; padding: 0; background: #dc2626; color: white; border: none; border-radius: 50%; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; transition: background 0.2s, transform 0.15s; }
+        .tasks-bar-close:hover { background: #b91c1c; transform: scale(1.05); }
+        .btn-tasks-toggle { position: fixed; left: 16px; top: 16px; min-width: 48px; height: 48px; padding: 0 14px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 0.9rem; font-weight: 600; z-index: 50; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 14px rgba(79,70,229,0.4); transition: opacity 0.25s ease, transform 0.25s ease; }
+        .btn-tasks-toggle:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(79,70,229,0.45); }
+        .btn-tasks-toggle.hidden { opacity: 0; pointer-events: none; transform: translateX(-8px); }
+        .btn-tasks-toggle .btn-tasks-icon { font-size: 1.15rem; }
+        .tasks-list { list-style: none; margin: 0; padding: 0; }
+        .tasks-list li { padding: 10px 12px; margin-bottom: 6px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; transition: background 0.2s; }
+        .tasks-list li:hover { background: #e0e7ff; border-color: #a5b4fc; }
+        .tasks-list .task-label { font-size: 0.85rem; color: #374151; flex: 1; min-width: 0; }
+        .tasks-list .task-reward { font-size: 0.8rem; font-weight: 700; color: #92400e; flex-shrink: 0; }
+        .tasks-list li.task-done .task-reward { color: #166534; }
+        .tasks-list li.task-current { background: #e0e7ff; border-color: #818cf8; }
+        .task-popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 500; }
+        .task-popup-overlay.visible { display: flex; }
+        .task-popup-overlay.visible .task-popup-box { animation: taskPopIn 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
+        @keyframes taskPopIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        .task-popup-box { position: relative; background: white; border-radius: 16px; padding: 24px; padding-top: 44px; max-width: 400px; width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+        .task-popup-box .task-popup-close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; padding: 0; background: #dc2626; color: white; border: none; border-radius: 50%; font-size: 20px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .task-popup-box .task-popup-close:hover { background: #b91c1c; }
+        .task-popup-box h3 { margin: 0 0 8px; color: #3730a3; font-size: 1.15rem; }
+        .task-popup-box .task-popup-desc { margin: 0 0 12px; color: #374151; font-size: 0.9rem; line-height: 1.5; }
+        .task-popup-box .task-popup-reward { font-weight: 700; color: #92400e; font-size: 0.95rem; }
+        .task-popup-box .task-popup-done { color: #166534; font-weight: 600; }
+        .btn-logout { position: fixed; top: 16px; right: 20px; padding: 8px 16px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; z-index: 51; display: none; }
+        .btn-logout:hover { background: #b91c1c; }
+        .btn-logout.visible { display: inline-block; }
         
+        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; min-width: 0; }
         .hero { text-align: center; margin-bottom: 16px; }
         .hero h1 { margin: 0; font-size: 1.75rem; color: #3730a3; }
         .hero p { margin: 4px 0 0; font-size: 0.9rem; color: #6366f1; }
-        .about-toggle { background: transparent; border: 1px solid #818cf8; color: #4f46e5; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; margin-top: 8px; }
-        .about-toggle:hover { background: #e0e7ff; }
-        .about-box { max-width: 560px; margin: 0 auto 16px; padding: 16px; background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); font-size: 0.9rem; line-height: 1.5; color: #374151; display: none; }
-        .about-box.visible { display: block; }
-        .about-box strong { color: #4f46e5; }
+        .nav-link { background: transparent; border: 1px solid #818cf8; color: #4f46e5; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; margin-top: 8px; text-decoration: none; display: inline-block; }
+        .nav-link:hover { background: #e0e7ff; }
 
         .container { width: 100%; max-width: 900px; height: 560px; background: white; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: flex; overflow: hidden; }
         
@@ -28,7 +58,11 @@
         .scenario-selector { margin-bottom: 8px; padding: 10px; border-radius: 8px; border: 1px solid #a5b4fc; width: 100%; max-width: 200px; background: #fff; }
         .scenario-goal { font-size: 0.8rem; color: #6366f1; margin-bottom: 12px; min-height: 2.2em; font-style: italic; }
         .scenario-goal .badge { display: inline-block; background: #22c55e; color: white; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-style: normal; margin-top: 4px; }
-        .avatar-box { width: 160px; height: 160px; background: #c7d2fe; border-radius: 50%; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; font-size: 64px; border: 5px solid white; transition: all 0.3s ease; }
+        .avatar-box { width: 160px; height: 160px; background: #c7d2fe; border-radius: 50%; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; font-size: 64px; border: 5px solid white; transition: all 0.3s ease; overflow: hidden; }
+        .avatar-box img.avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .avatar-box .avatar-emoji { display: none; }
+        .avatar-box.avatar-emoji-mode .avatar-emoji { display: block; }
+        .avatar-box.avatar-emoji-mode .avatar-img { display: none !important; }
         .mood-text { color: #666; font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; }
         .session-stats { font-size: 0.75rem; color: #6b7280; margin-bottom: 8px; }
         .btn-end { padding: 8px 16px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
@@ -111,7 +145,7 @@
         .login-box .btn-signup:hover { background: #c7d2fe; }
         .login-box .welcome { margin-top: 16px; font-size: 0.9rem; color: #22c55e; text-align: center; display: none; }
 
-        .coins-bar { position: fixed; top: 16px; right: 20px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; z-index: 50; }
+        .coins-bar { position: fixed; top: 16px; right: 110px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; z-index: 50; }
         .coins-bar .coin-count { background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 20px; font-weight: 700; }
         .coins-bar .btn-shop { padding: 6px 14px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
         .coins-bar .btn-shop:hover { background: #4338ca; }
@@ -185,22 +219,32 @@
     </div>
 </div>
 
+<button type="button" class="btn-tasks-toggle" id="btnTasksToggle" title="Open tasks"><span class="btn-tasks-icon" aria-hidden="true">☰</span><span>Tasks</span></button>
+
+<button type="button" class="btn-logout" id="btnLogout">Log out</button>
+
 <div class="coins-bar" id="coinsBar" style="display: none;">
     <span class="reward-kindness-badge" id="kindnessBadge" style="display: none;" title="Kindness Badge">🏅</span>
     <span class="coin-count">🪙 <span id="coinCount">0</span> coins</span>
     <button type="button" class="btn-shop" id="btnShop">Reward Shop</button>
 </div>
 
+<aside class="tasks-bar" id="tasksBar">
+    <div class="tasks-bar-header">
+        <h2>Tasks</h2>
+        <button type="button" class="tasks-bar-close" id="tasksBarClose" aria-label="Close">×</button>
+    </div>
+    <ul class="tasks-list" id="tasksList"></ul>
+</aside>
+
+<div class="main-content">
 <div class="hero">
     <h1>SociAble</h1>
     <p>Practice social situations in a safe sandbox. Your words change how the character feels.</p>
-    <button type="button" class="about-toggle" id="aboutToggle">What is SociAble?</button>
-    <a href="dashboard.html" class="about-toggle" style="margin-left: 8px; text-decoration: none;">Analytics</a>
+    <a href="about.html" class="nav-link">What is SociAble?</a>
+    <a href="dashboard.html" class="nav-link" style="margin-left: 8px;">Analytics</a>
 </div>
-<div class="about-box" id="aboutBox">
-    <strong>Not just a chatbot.</strong> SociAble is a social practice sandbox for kids: pick a scenario (grocery store, playground, classroom), talk to a character, and see how your words affect their mood. If you're kind, they smile. If you're rude, they get hurt—so you learn cause and effect in a safe space. The "vibe check" gently flags mean language and suggests rephrasing instead of blocking. <strong>Goal:</strong> practice real social moments with real emotional feedback.
-    <p style="margin-top: 12px; margin-bottom: 0;"><strong>How can SociAble help an autistic child?</strong> Many autistic children find social situations unpredictable and overwhelming. SociAble is designed to support practice in ways that can reduce that stress: <strong>predictable scenarios</strong> (same places, clear goals) so there’s less surprise; <strong>visual feedback</strong> (the character’s face and mood) so the link between words and feelings is clear; <strong>no real-world consequences</strong>—mistakes only affect the character in the sandbox, so it’s safe to try and rephrase; <strong>gentle “try again”</strong> instead of harsh correction when language is unkind; and <strong>clear goals per scenario</strong> so practice has structure. It’s a tool to rehearse social moments at the child’s pace, and works well alongside a parent, caregiver, or educator.</p>
-</div>
+
 
 <div class="container">
     <div class="visual-panel">
@@ -210,9 +254,12 @@
             <option value="Playground">Playground</option>
             <option value="Classroom">Classroom</option>
         </select>
-        <p class="scenario-goal" id="scenarioGoal">Goal: Make them smile with something kind.</p>
+        <p class="scenario-goal" id="scenarioGoal">Task: Pick a scenario and say hello.</p>
         
-        <div class="avatar-box" id="avatarDisplay">😐</div>
+        <div class="avatar-box avatar-emoji-mode" id="avatarDisplay">
+            <img id="avatarImg" class="avatar-img" src="" alt="Character" style="display: none;">
+            <span class="avatar-emoji" id="avatarEmoji">😐</span>
+        </div>
         <p id="moodText" class="mood-text">Neutral</p>
         <p class="session-stats" id="sessionStats">Kind moments: 0 · Flagged: 0</p>
         <button type="button" class="btn-end" id="btnEndPractice">End practice</button>
@@ -241,6 +288,18 @@
         <p class="stt-hint" id="sttHint">Tap the mic, then speak. Your words appear in the box — tap Send or mic again to stop. Works best in <strong>Chrome or Edge</strong> on <strong>https://</strong> or <strong>localhost</strong>. Allow microphone when asked.</p>
     </div>
 </div>
+</div><!-- .main-content -->
+
+<div class="task-popup-overlay" id="taskPopupOverlay">
+    <div class="task-popup-box" onclick="event.stopPropagation()">
+        <button type="button" class="task-popup-close" id="taskPopupClose" aria-label="Close">×</button>
+        <h3 id="taskPopupTitle">Task</h3>
+        <p class="task-popup-desc" id="taskPopupDesc"></p>
+        <p class="task-popup-reward" id="taskPopupReward"></p>
+        <p class="task-popup-done" id="taskPopupDone" style="display: none;">✓ Completed</p>
+    </div>
+</div>
+
 <div class="listening-toast" id="listeningToast">Listening — speak now! Tap mic again to stop.</div>
 
 <div id="feedbackToast" class="feedback-toast">
@@ -348,19 +407,52 @@
     let purchasedRewardIds = [];
     let storedUsername = '';
 
-    // Progress-based goals: after N kind messages, goal completes and objective changes; coins increase per tier
+    // Progress-based tiers: after N kind messages, milestone completes and coins increase
     const GOAL_TIERS = [
-        { kindRequired: 3, label: 'Make them smile 3 times', coins: 10 },
-        { kindRequired: 6, label: 'Make them smile 6 times', coins: 25 },
-        { kindRequired: 10, label: 'Make them smile 10 times', coins: 50 },
-        { kindRequired: 15, label: 'Make them smile 15 times', coins: 100 }
+        { kindRequired: 3, coins: 10 },
+        { kindRequired: 6, coins: 25 },
+        { kindRequired: 10, coins: 50 },
+        { kindRequired: 15, coins: 100 }
     ];
 
-    const SCENARIO_GOALS = {
-        'Grocery Store': 'Make them smile (e.g. say please, thank you).',
-        'Playground': 'Be friendly and include others.',
-        'Classroom': 'Ask for help politely or say sorry if needed.'
+    // Scenario-based goal options: one is picked at random when the child selects that scenario (dynamic each time)
+    const SCENARIO_GOAL_OPTIONS = {
+        'Grocery Store': [
+            'Ask the character to help you find an item in the store (e.g. milk, bread, cereal).',
+            'Ask where something is in the store, using "please" and "thank you".',
+            'Ask for help reaching something on a high shelf.',
+            'Ask the character to help you find the right aisle for an item.',
+            'Ask politely if they can help you with your shopping.'
+        ],
+        'Playground': [
+            'Ask how to use a toy or equipment (e.g. swing, slide, how to play a game).',
+            'Ask if you can join a game or play with others.',
+            'Ask someone to explain the rules of a game.',
+            'Ask for help when you can\'t figure out how something works.',
+            'Ask politely to take turns on the swings or slide.'
+        ],
+        'Classroom': [
+            'Ask the teacher or a friend for help with something you don\'t understand.',
+            'Ask how to use something in the classroom (e.g. pencil sharpener, where something is).',
+            'Ask to borrow something politely (e.g. an eraser, a crayon).',
+            'Ask where to put your things or find your seat.',
+            'Ask for help finding a book or a supply.'
+        ]
     };
+
+    var currentScenarioGoalText = '';
+    var currentScenarioForGoal = '';
+
+    function pickNewScenarioGoal(scenario) {
+        var options = SCENARIO_GOAL_OPTIONS[scenario];
+        if (!options || options.length === 0) {
+            currentScenarioGoalText = 'Be kind and friendly.';
+            currentScenarioForGoal = scenario;
+            return;
+        }
+        currentScenarioForGoal = scenario;
+        currentScenarioGoalText = options[Math.floor(Math.random() * options.length)];
+    }
 
     const SCENARIO_IMAGES = {
     'Grocery Store': 'static/grocery_shop.png',
@@ -368,9 +460,13 @@
     'Classroom': 'static/classroom.png'
     };
 
-    document.getElementById('aboutToggle').onclick = function () {
-        document.getElementById('aboutBox').classList.toggle('visible');
+    // Scenario → character folder name (images: static/{character}/{character}-{mood}.png). No entry = emoji fallback.
+    const SCENARIO_CHARACTER = {
+        'Grocery Store':'cashier',
+        'Playground': 'kid',
+        'Classroom': 'student'
     };
+
     document.getElementById('btnEndPractice').onclick = function () { showRecap(); };
     document.getElementById('btnCloseRecap').onclick = function () {
         recapOverlay.classList.remove('visible');
@@ -379,9 +475,35 @@
     document.getElementById('btnShop').onclick = openShop;
     document.getElementById('shopCloseX').onclick = function () { shopOverlay.classList.remove('visible'); };
     scenarioSelect.addEventListener('change', function () {
+        pickNewScenarioGoal(scenarioSelect.value);
         resetChat();
         updateScenarioGoal();
     });
+    const taskPopupOverlay = document.getElementById('taskPopupOverlay');
+    const taskPopupClose = document.getElementById('taskPopupClose');
+    document.getElementById('taskPopupClose').onclick = function () { taskPopupOverlay.classList.remove('visible'); };
+    taskPopupOverlay.addEventListener('click', function (e) { if (e.target === taskPopupOverlay) taskPopupOverlay.classList.remove('visible'); });
+    var tasksBar = document.getElementById('tasksBar');
+    var btnTasksToggle = document.getElementById('btnTasksToggle');
+    function openTasksPanel() {
+        tasksBar.classList.add('open');
+        btnTasksToggle.classList.add('hidden');
+        btnTasksToggle.setAttribute('title', 'Close tasks');
+    }
+    function closeTasksPanel() {
+        tasksBar.classList.remove('open');
+        btnTasksToggle.classList.remove('hidden');
+        btnTasksToggle.setAttribute('title', 'Open tasks');
+    }
+    btnTasksToggle.onclick = openTasksPanel;
+    document.getElementById('tasksBarClose').onclick = closeTasksPanel;
+    document.getElementById('btnLogout').onclick = function () {
+        userToken = null;
+        localStorage.removeItem('sociable_token');
+        loginOverlay.classList.remove('hidden');
+        coinsBar.style.display = 'none';
+        document.getElementById('btnLogout').classList.remove('visible');
+    };
     btnTryAgain.onclick = function () { userInput.focus(); };
     document.getElementById('btnLogin').onclick = handleLogin;
     document.getElementById('btnSignup').onclick = handleSignup;
@@ -395,6 +517,7 @@
                 coinCountEl.textContent = d.coins;
                 shopCoinCount.textContent = d.coins;
                 coinsBar.style.display = 'flex';
+                document.getElementById('btnLogout').classList.add('visible');
                 purchasedRewardIds = d.purchased_reward_ids || [];
                 storedUsername = d.username || '';
                 applyRewards();
@@ -528,6 +651,7 @@
                 localStorage.setItem('sociable_token', userToken);
                 loginWelcome.textContent = 'Welcome, ' + username + '!';
                 fetchProfile();
+                document.getElementById('btnLogout').classList.add('visible');
                 setTimeout(function () {
                     loginOverlay.classList.add('hidden');
                 }, 800);
@@ -561,16 +685,49 @@
         renderSuggestions(['Hi!', 'Hello!', 'Can you help me?', 'Thank you']);
     }
 
+    function renderTasksList() {
+        const scenario = scenarioSelect.value;
+        const options = SCENARIO_GOAL_OPTIONS[scenario];
+        const ul = document.getElementById('tasksList');
+        ul.innerHTML = '';
+        if (!options || options.length === 0) {
+            const li = document.createElement('li');
+            li.innerHTML = '<span class="task-label">Be kind and friendly.</span><span class="task-reward">+5 coins</span>';
+            ul.appendChild(li);
+            return;
+        }
+        options.forEach(function (taskText) {
+            const li = document.createElement('li');
+            const isCurrent = (taskText === currentScenarioGoalText);
+            if (isCurrent) li.classList.add('task-current');
+            var shortLabel = taskText.length > 48 ? taskText.substring(0, 48) + '…' : taskText;
+            li.innerHTML = '<span class="task-label">' + shortLabel + '</span><span class="task-reward">+5 coins</span>';
+            li.setAttribute('data-task', taskText);
+            li.onclick = function () {
+                document.getElementById('taskPopupTitle').textContent = 'Task';
+                document.getElementById('taskPopupDesc').textContent = taskText;
+                document.getElementById('taskPopupReward').textContent = '+5 coins when you\'re kind · +15 bonus when you complete this task.';
+                document.getElementById('taskPopupDone').style.display = (isCurrent && goalTierIndex > 0) ? 'block' : 'none';
+                document.getElementById('taskPopupOverlay').classList.add('visible');
+            };
+            ul.appendChild(li);
+        });
+    }
+
     function updateScenarioGoal() {
         const scenario = scenarioSelect.value;
-        const baseGoal = SCENARIO_GOALS[scenario] || 'Make them smile with something kind.';
+        if (scenario !== currentScenarioForGoal || !currentScenarioGoalText) {
+            pickNewScenarioGoal(scenario);
+        }
+        var goalText = currentScenarioGoalText || 'Be kind and friendly.';
         if (goalTierIndex >= GOAL_TIERS.length) {
-            scenarioGoalEl.innerHTML = 'All goals complete! Keep being kind. <span class="badge">★</span>';
+            scenarioGoalEl.innerHTML = 'All milestones done! ' + goalText + ' <span class="badge">★</span>';
         } else {
             const tier = GOAL_TIERS[goalTierIndex];
             const soFar = Math.min(kindMoments, tier.kindRequired);
-            scenarioGoalEl.innerHTML = 'Goal ' + (goalTierIndex + 1) + ': ' + tier.label + ' (' + soFar + '/' + tier.kindRequired + ')';
+            scenarioGoalEl.innerHTML = '<strong>Task:</strong> ' + goalText + ' <span class="badge">' + soFar + '/' + tier.kindRequired + ' kind</span>';
         }
+        renderTasksList();
         const scenarioImgUrl = SCENARIO_IMAGES[scenario];
         const scenarioBg = document.getElementById('scenarioBg');
         if (scenarioBg && scenarioImgUrl) {
@@ -783,11 +940,32 @@
     }
 
     function updateAvatar(mood) {
-        let emoji = '😐', color = '#c7d2fe';
-        if (mood === 'HAPPY') { emoji = '😄'; color = '#bbf7d0'; }
-        if (mood === 'SAD') { emoji = '😢'; color = '#fecaca'; }
-        if (mood === 'ANGRY') { emoji = '😡'; color = '#fecaca'; }
-        avatarDisplay.textContent = emoji;
+        var scenario = scenarioSelect.value;
+        var character = SCENARIO_CHARACTER[scenario];
+        var moodKey = (mood || 'NEUTRAL').toLowerCase();
+        if (moodKey === 'angry') moodKey = 'sad';
+        var emoji = '\u{1F610}', color = '#c7d2fe';
+        if (mood === 'HAPPY') { emoji = '\u{1F604}'; color = '#bbf7d0'; }
+        if (mood === 'SAD') { emoji = '\u{1F622}'; color = '#fecaca'; }
+        if (mood === 'ANGRY') { emoji = '\u{1F621}'; color = '#fecaca'; }
+        if (character) {
+            var src = 'static/' + character + '/' + character + '-' + moodKey + '.png';
+            var img = document.getElementById('avatarImg');
+            img.src = src;
+            img.style.display = 'block';
+            img.onerror = function () {
+                img.style.display = 'none';
+                avatarDisplay.classList.add('avatar-emoji-mode');
+                document.getElementById('avatarEmoji').textContent = emoji;
+            };
+            avatarDisplay.classList.remove('avatar-emoji-mode');
+            document.getElementById('avatarEmoji').textContent = emoji;
+        } else {
+            document.getElementById('avatarImg').style.display = 'none';
+            document.getElementById('avatarImg').src = '';
+            avatarDisplay.classList.add('avatar-emoji-mode');
+            document.getElementById('avatarEmoji').textContent = emoji;
+        }
         avatarDisplay.style.backgroundColor = color;
         moodText.textContent = mood ? mood.charAt(0).toUpperCase() + mood.slice(1).toLowerCase() : 'Neutral';
     }
@@ -945,6 +1123,7 @@
     });
 
     updateScenarioGoal();
+    updateAvatar('NEUTRAL');
 </script>
 
 </body>

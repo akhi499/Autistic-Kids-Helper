@@ -144,8 +144,11 @@ class AwardCoinsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        amount = request.data.get("amount", 0)
-        if not isinstance(amount, int) or amount <= 0 or amount > 100:
+        try:
+            amount = int(request.data.get("amount", 0))
+            if amount <= 0 or amount > 100:
+                raise ValueError
+        except (TypeError, ValueError):
             return Response({"error": "Invalid amount"}, status=status.HTTP_400_BAD_REQUEST)
         profile = get_or_create_profile(request.user)
         profile.coins += amount

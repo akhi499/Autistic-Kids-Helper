@@ -3,4 +3,5 @@ djangorestframework
 django-cors-headers
 mistralai
 python-dotenv
+gunicorn
 # Add any other dependencies you might be using

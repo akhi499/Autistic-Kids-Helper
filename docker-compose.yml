@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3
+      - ./staticfiles:/app/staticfiles
+    environment:
+      - DJANGO_SETTINGS_MODULE=sociable_backend.settings
+      - PYTHONUNBUFFERED=1
+      - MISTRAL_API_KEY=Klu5Xz5qQCQl2cTBbB0aPZz4VgdhSvzp
+    command: gunicorn --bind 0.0.0.0:8000 sociable_backend.wsgi:application

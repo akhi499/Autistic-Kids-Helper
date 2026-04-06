@@ -1,5 +1,10 @@
 import os
-from mistralai import Mistral
+
+# Import Mistral client - optional for testing
+try:
+    from mistralai import Mistral
+except ImportError:
+    Mistral = None
 
 # Try to load from .env file if python-dotenv is installed
 try:
@@ -11,7 +16,12 @@ except ImportError:
 # Initialize Mistral client with API key from environment variable
 # Set MISTRAL_API_KEY environment variable or create a .env file
 api_key = os.getenv('MISTRAL_API_KEY', 'YOUR_MISTRAL_API_KEY')
-client = Mistral(api_key=api_key) if api_key != 'YOUR_MISTRAL_API_KEY' else None
+client = None
+if Mistral is not None and api_key != 'YOUR_MISTRAL_API_KEY':
+    try:
+        client = Mistral(api_key=api_key)
+    except Exception:
+        client = None
 
 def analyze_interaction(user_text, scenario, history=None):
     """

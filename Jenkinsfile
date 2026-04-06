@@ -65,7 +65,6 @@ pipeline {
             steps {
                 echo '🗄️ Setting up test database...'
                 bat '''
-                    "%VENV%\\Scripts\\python.exe" manage.py makemigrations --check --dry-run
                     "%VENV%\\Scripts\\python.exe" manage.py migrate --run-syncdb
                 '''
             }

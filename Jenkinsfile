@@ -98,20 +98,6 @@ pipeline {
                     "%VENV%\\Scripts\\python.exe" -m coverage xml
                 '''
             }
-            post {
-                always {
-                    step([$class: 'CoberturaPublisher',
-                        autoUpdateHealth: false,
-                        autoUpdateStability: false,
-                        coberturaReportFile: 'coverage.xml',
-                        failUnhealthy: false,
-                        failUnstable: false,
-                        maxNumberOfBuilds: 0,
-                        onlyStable: false,
-                        sourceEncoding: 'ASCII',
-                        zoomCoverageChart: false])
-                }
-            }
         }
 
         stage('Security Scan') {

@@ -53,7 +53,7 @@ pipeline {
                     "%VENV%\\Scripts\\flake8.exe" simulator/ --count --statistics --exit-zero
                     
                     echo "Checking code formatting with black..."
-                    "%VENV%\\Scripts\\black.exe" --check --diff simulator/ --exit-code || exit /b 0
+                    "%VENV%\\Scripts\\black.exe" --check --diff simulator/ || exit /b 0
                     
                     echo "Sorting imports..."
                     "%VENV%\\Scripts\\isort.exe" --check-only --diff simulator/ --exit-code || exit /b 0

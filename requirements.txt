@@ -1,5 +1,6 @@
 Django>=5.2
 djangorestframework
 django-cors-headers
+mistralai
 python-dotenv
 # Add any other dependencies you might be using

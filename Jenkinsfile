@@ -1,59 +1,156 @@
 pipeline {
-    // Executes on any available Jenkins agent
-    agent any 
+    agent any
 
     environment {
-        // Sets up a virtual environment in the workspace
-        VENV = "${WORKSPACE}/venv"
-        PATH = "${VENV}/bin:$PATH"
+        VENV = "${WORKSPACE}\\venv"
+        PYTHONUNBUFFERED = '1'
+        DJANGO_SETTINGS_MODULE = 'sociable_backend.settings'
+    }
+
+    options {
+        // Discard builds older than 30 days or more than 50 builds
+        buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '50'))
+        // Timeout after 1 hour
+        timeout(time: 1, unit: 'HOURS')
+        // Disable concurrent builds
+        disableConcurrentBuilds()
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Pulls the latest code from your Git repository
+                echo '📥 Checking out code...'
                 checkout scm
             }
         }
 
         stage('Setup Environment') {
             steps {
-                echo 'Creating Python Virtual Environment...'
-                sh '''
-                    python3 -m venv ${VENV}
-                    . ${VENV}/bin/activate
-                    pip install --upgrade pip
+                echo '🐍 Setting up Python virtual environment...'
+                bat '''
+                    python -m venv "%VENV%"
+                    "%VENV%\\Scripts\\python.exe" -m pip install --upgrade pip setuptools wheel
                 '''
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                echo 'Installing requirements...'
-                sh '''
-                    . ${VENV}/bin/activate
-                    pip install -r requirements.txt
+                echo '📦 Installing dependencies...'
+                bat '''
+                    "%VENV%\\Scripts\\pip.exe" install -r requirements.txt
                 '''
             }
         }
 
-        stage('Run Database Migrations') {
+        stage('Code Quality') {
             steps {
-                echo 'Running initial migrations for the test environment...'
-                sh '''
-                    . ${VENV}/bin/activate
-                    python manage.py makemigrations
-                    python manage.py migrate
+                echo '🔍 Running code quality checks...'
+                bat '''
+                    "%VENV%\\Scripts\\pip.exe" install flake8 black isort pylint
+                    
+                    echo "Running flake8..."
+                    "%VENV%\\Scripts\\flake8.exe" simulator/ --count --statistics --exit-zero
+                    
+                    echo "Checking code formatting with black..."
+                    "%VENV%\\Scripts\\black.exe" --check --diff simulator/ --exit-code || exit /b 0
+                    
+                    echo "Sorting imports..."
+                    "%VENV%\\Scripts\\isort.exe" --check-only --diff simulator/ --exit-code || exit /b 0
+                '''
+            }
+        }
+
+        stage('Database Setup') {
+            steps {
+                echo '🗄️ Setting up test database...'
+                bat '''
+                    "%VENV%\\Scripts\\python.exe" manage.py makemigrations --check --dry-run
+                    "%VENV%\\Scripts\\python.exe" manage.py migrate --run-syncdb
+                '''
+            }
+        }
+
+        stage('Collect Static Files') {
+            steps {
+                echo '📁 Collecting static files...'
+                bat '''
+                    "%VENV%\\Scripts\\python.exe" manage.py collectstatic --noinput --clear
                 '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                echo 'Executing Django Tests...'
-                sh '''
-                    . ${VENV}/bin/activate
-                    python manage.py test simulator
+                echo '✅ Running tests...'
+                bat '''
+                    "%VENV%\\Scripts\\python.exe" manage.py test simulator --verbosity=2 --keepdb
+                '''
+            }
+        }
+
+        stage('Test Coverage') {
+            steps {
+                echo '📊 Generating test coverage report...'
+                bat '''
+                    "%VENV%\\Scripts\\pip.exe" install coverage
+                    "%VENV%\\Scripts\\python.exe" -m coverage run --source=simulator manage.py test simulator
+                    "%VENV%\\Scripts\\python.exe" -m coverage report
+                    "%VENV%\\Scripts\\python.exe" -m coverage xml
+                '''
+            }
+            post {
+                always {
+                    step([$class: 'CoberturaPublisher',
+                        autoUpdateHealth: false,
+                        autoUpdateStability: false,
+                        coberturaReportFile: 'coverage.xml',
+                        failUnhealthy: false,
+                        failUnstable: false,
+                        maxNumberOfBuilds: 0,
+                        onlyStable: false,
+                        sourceEncoding: 'ASCII',
+                        zoomCoverageChart: false])
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                echo '🔐 Running security scan...'
+                bat '''
+                    "%VENV%\\Scripts\\pip.exe" install safety bandit
+                    
+                    echo "Checking for known vulnerabilities..."
+                    "%VENV%\\Scripts\\python.exe" -m safety check --exit-code 0 || exit /b 0
+                    
+                    echo "Running bandit security scan..."
+                    "%VENV%\\Scripts\\bandit.exe" -r simulator/ -f json -o bandit-report.json || exit /b 0
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo '🐳 Building Docker image...'
+                bat '''
+                    docker build -t sociable-backend:%BUILD_NUMBER% .
+                    docker tag sociable-backend:%BUILD_NUMBER% sociable-backend:latest
+                '''
+            }
+        }
+
+        stage('Deploy to Staging') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo '🚀 Deploying to staging...'
+                bat '''
+                    echo "Staging deployment would happen here"
                 '''
             }
         }
@@ -61,15 +158,24 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline execution complete.'
-            // Optional: Add steps here to clean up workspace or send email notifications
+            echo '🧹 Cleaning up...'
             cleanWs()
         }
+        
         success {
-            echo 'Build and tests passed successfully!'
+            echo '✅ Build succeeded!'
+            // Send success notification
+            // slackSend(channel: '#builds', color: 'good', message: "Build ${BUILD_NUMBER} succeeded")
         }
+        
         failure {
-            echo 'Build failed. Check the logs for errors.'
+            echo '❌ Build failed!'
+            // Send failure notification
+            // slackSend(channel: '#builds', color: 'danger', message: "Build ${BUILD_NUMBER} failed")
+        }
+        
+        unstable {
+            echo '⚠️ Build unstable (tests passed but quality issues)'
         }
     }
 }
